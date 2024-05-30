@@ -4,6 +4,9 @@ $(document).ready(
             var timer;
             var doAutoRefresh = false;
 
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+
             __init();
 
             function __init() {
@@ -204,6 +207,24 @@ $(document).ready(
                 }
             }
 
+            function copyToClipboard(elementId, attr) {
+                var element = document.getElementById(elementId);
+                var dataUrl = element.getAttribute(attr);
+
+                // Create a temporary input element
+                var tempInput = document.createElement('textarea');
+                tempInput.value = dataUrl;
+
+                // Append the input element to the document
+                document.body.appendChild(tempInput);
+                tempInput.select();
+
+                // Execute the copy command
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                navigator.clipboard.writeText(dataUrl);
+            }
+
             function addServer(host, port) {
                 if (host) {
                     myCoockie = $.cookie("beansServers");
@@ -398,5 +419,62 @@ $(document).ready(
                     }
                 });
             }
+
+            function jsonFormatter(state) {
+                let searchParams = new URLSearchParams(window.location.search)
+                if (searchParams.get('tube')) {
+                    var json_el = $(`.json-viewer.${state}`);
+                    var json_text = json_el.attr('data-json');
+                    if (json_text) {
+                        try {
+                            json_el.jsonViewer(JSON.parse(json_text), {
+                            });
+                        } catch(err) {
+                            json_el.html(json_text)
+                        }
+                    }
+                }
+            }
+
+            function copyJob(state) {
+                $(`.btn-copy.${state}`).click(function() {
+                    copyToClipboard(`json-viewer-${state}`, 'data-json')
+                    $(`#json-viewer-${state}`).popover('show')
+                    setTimeout(function() {
+                        $(`#json-viewer-${state}`).popover('hide')
+                    }, 2000)
+                })
+            }
+
+            function fullScreen(state) {
+                // card-job-<?php echo $state ?>
+
+                $(`.btn-expand.${state}`).click(function() {
+                    var json_el = $(`.json-viewer.${state}`)
+                    var json_text = json_el.attr('data-json')
+                    if (json_text) {
+                        $('#modalJob').removeClass('d-none')
+                        try {
+                            $('#modalJob .job-data-expanded').jsonViewer(JSON.parse(json_text), {
+                            });
+                        } catch(err) {
+                            $('#modalJob .job-data-expanded').html(json_text)
+                        }
+                    }
+                })
+            }
+
+            jsonFormatter('ready');
+            jsonFormatter('delayed');
+            jsonFormatter('buried');
+
+            copyJob('ready');
+            copyJob('delayed');
+            copyJob('buried');
+
+            // fullScreen('ready');
+            // fullScreen('delayed');
+            // fullScreen('buried');
+
         }
 );

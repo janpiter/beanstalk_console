@@ -1,15 +1,61 @@
+@font-face {
+   font-family: 'Nunito';
+   src: url('fonts/nunito/Nunito-Regular.woff2') format('woff2');
+}
+
+@font-face {
+   font-family: 'Nunito';
+   src: url('fonts/nunito/Nunito-Bold.woff2') format('woff2');
+   font-weight: bold;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background: rgba(30,30,30,.4); 
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(30,30,30,.5); 
+}
+::-webkit-scrollbar-corner {
+  background: rgba(0,0,0,0);
+}
+
 html {
     height: 100%;
 }
 
 body {
-    padding-top: 70px;
+/*    padding-top: 70px;*/
+    font-family: "Nunito"!important;
 }
 
 body.no-nav {
     padding-top: 0;
     height: 100%;
     min-height: 100%;
+}
+
+.fs-13px {
+    font-size: 13px!important;
+}
+
+table *{
+    font-size: 14px!important;
+}
+
+pre {
+    white-space: pre-wrap!important;
+}
+pre code {
+    font-size: 12px!important;
 }
 
 .site-wrapper {
@@ -32,12 +78,14 @@ ol.inside, ul.inside {
     color: #449d44;
 }
 
-.navbar-nav > li > a {padding-top:12px !important; padding-bottom:6px !important;}
+.navbar-nav > li > a {
+    padding-top:12px !important; padding-bottom:6px !important;
+}
 .navbar-default {min-height:40px !important}
 .navbar-brand{ padding: 10px 8px;font-size: 22px;line-height: 22px;font-weight: 200;height:40px; }
 
 #autoRefresh, #autoRefreshSummary {
-    margin-top: 2px;
+/*    margin-top: 2px;*/
 }
 
 .ellipsize {
@@ -47,13 +95,13 @@ ol.inside, ul.inside {
 }
 
 #actionsRow form {
-    display: inline-block;
-    padding: 0 10px;
+/*    display: inline-block;*/
+/*    padding: 0 10px;*/
 }
 
 #actionsRow form input {
-    padding: 5px 0px;
-    width: 80px;
+/*    padding: 5px 0px;*/
+/*    width: 80px;*/
 }
 
 .a-unstyled { color: inherit; text-decoration: none; }
@@ -71,6 +119,7 @@ ol.inside, ul.inside {
 /** Highlight buried jobs */
 #summaryTable * td.td-current-jobs-buried.hasValue, #servers-index * td.td-current-jobs-buried.hasValue {
     color: darkred;
+    color: #e685b5;
     font-weight: bolder;
     background-color: #ffdddd;
 }

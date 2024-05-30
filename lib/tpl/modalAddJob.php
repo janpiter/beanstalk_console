@@ -2,56 +2,55 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">×</button>
-                <h4 class="modal-title">Add new job</h4>
+                <h5 class="modal-title">Add new job</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form class="form-horizontal">
                     <fieldset>
-                        <div class="alert alert-error hide" id="tubeSaveAlert">
-                            <button type="button" class="close" data-dismiss="alert">×</button>
+                        <div class="alert alert-error d-none" id="tubeSaveAlert">
                             <strong>Error!</strong> Required fields are marked *
                         </div>
 
                         <div class="form-group">
-                            <label class="control-label col-xs-3" for="focusedInput">*Tube name</label>
+                            <label class="control-label col" for="focusedInput">*Tube name</label>
 
-                            <div class="col-xs-9">
+                            <div class="col">
                                 <input class="form-control focused" id="tubeName" type="text" value="<?php echo $tube ?>">
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label class="control-label col-xs-3" for="textarea">*Data</label>
+                        <div class="form-group mt-3">
+                            <label class="control-label col" for="textarea">*Data</label>
 
-                            <div class="col-xs-9">
+                            <div class="col">
                                 <textarea id="tubeData" rows="3" class="form-control "></textarea>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="control-label col-xs-3" for="focusedInput">Priority</label>
+                        <div class="form-group mt-3">
+                            <label class="control-label col" for="focusedInput">Priority</label>
 
-                            <div class="col-xs-9">
+                            <div class="col">
                                 <input class="form-control focused" id="tubePriority" type="text" value="">
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="control-label col-xs-3" for="focusedInput">Delay</label>
+                        <div class="form-group mt-3">
+                            <label class="control-label col" for="focusedInput">Delay</label>
 
-                            <div class="col-xs-9">
+                            <div class="col">
                                 <input class="form-control focused" id="tubeDelay" type="text" value="">
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="control-label col-xs-3" for="focusedInput">Ttr</label>
+                        <div class="form-group mt-3">
+                            <label class="control-label col" for="focusedInput">Ttr</label>
 
-                            <div class="col-xs-9">
+                            <div class="col">
                                 <input class="form-control focused" id="tubeTtr" type="text" value="">
                             </div>
                         </div>
             </div>
             <div class="modal-footer">
-                <a href="#" class="btn" data-dismiss="modal">Close</a>
+                <a href="#" class="btn" data-bs-dismiss="modal">Close</a>
                 <a href="#" class="btn btn-success" id="tubeSave">Save changes</a>
             </div>
             </fieldset>

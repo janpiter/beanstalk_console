@@ -264,7 +264,11 @@ class BeanstalkInterface {
     }
 
     public function exceptions_error_handler($severity, $message, $filename, $lineno) {
-        echo '<span style="color:red">Unserialize or Base64decode got a fatal error, please include the necessary files, or deactivate unserialization from Settings (<a href="#" onclick="$(\'#settings\').modal();return false;">click to open</a>)</span></br>';
+        echo 
+            `<div class="alert alert-warning alert-dismissible" role="alert">
+                Unserialize or Base64decode got a fatal error, please include the necessary files, or deactivate unserialization from Settings (<a href="#" onclick="$(\'#settings\').modal();return false;">click to open</a>)
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>`;
         return false;
     }
 

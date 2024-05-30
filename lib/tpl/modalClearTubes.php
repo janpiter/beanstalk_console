@@ -2,8 +2,8 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="clear-tubes-label">Clear multiple tubes</h4>
+                <h5 class="modal-title" id="clear-tubes-label">Clear multiple tubes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form>
@@ -27,15 +27,15 @@
 
                         </div>
                     </fieldset>
-                    <div>
+                    <div class="mt-2">
                         <strong>Tube list</strong>
                         <?php
                         foreach ((is_array($tubes) ? $tubes : array()) as $tube):
                             ?>
-                            <div class="checkbox">
-                                <label class="">
-                                    <input type="checkbox" name="<?php echo $tube ?>" value="1">
-                                    <b><?php echo $tube ?></b>
+                            <div class="form-check">
+                                <input id="t-<?php echo $tube ?>" type="checkbox" name="<?php echo $tube ?>" value="1" class="form-check-input">
+                                <label class="form-check-label" for="t-<?php echo $tube ?>">
+                                    <?php echo $tube ?>
                                 </label>
                             </div>
                         <?php endforeach ?>
@@ -44,7 +44,7 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
                 <a href="#" class="btn btn-success" id="clearTubes">Clear selected tubes</a>
                 <br/><br/>
 

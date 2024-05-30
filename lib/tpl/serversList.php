@@ -21,69 +21,74 @@ if (!empty($servers)):
     $servers = array_filter(array_unique($servers));
     ?>
     <div class="row">
-        <div class="col-sm-12">
-            <table class="table table-striped table-hover" id="servers-index">
-                <thead>
-                    <tr>
-                        <th>name</th>
-                        <?php foreach ($console->getServerStats(current($servers)) as $key => $item): ?>
-                            <th class="<?php if (!in_array($key, $visible)) echo 'hide' ?>" name="<?php echo $key ?>"
-                                title="<?php echo $item['description'] ?>"><?php echo $key ?></th>
-                            <?php endforeach ?>
-                        <th>&nbsp;</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    foreach ($servers as $key => $server):
-                        $stats = $console->getServerStats($server);
-                        $label = $key;
-                        if (empty($label) || is_numeric($label)) {
-                            $label = $server;
-                        }
-                        ?>
-                        <tr>
-                            <?php if (empty($stats)): ?>
-                                <td style="white-space: nowrap;"><?php echo htmlspecialchars($label) ?></td>
-                            <?php else: ?>
-                                <td  style="white-space: nowrap;"><a href="./?server=<?php echo htmlspecialchars($server) ?>"><?php echo htmlspecialchars($label); ?></a></td>
-                            <?php endif ?>
-                            <?php foreach ($stats as $key => $item): ?>
+        <div class="col-md-12 col-12 mt-4">
+            <div class="card bg-body border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-dark table-borderless align-middle mb-0" id="servers-index">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <?php foreach ($console->getServerStats(current($servers)) as $key => $item): ?>
+                                        <th class="<?php if (!in_array($key, $visible)) echo 'd-none' ?>" name="<?php echo $key ?>"
+                                            title="<?php echo $item['description'] ?>"><?php echo ucfirst(str_replace('-', ' ', $key)) ?></th>
+                                        <?php endforeach ?>
+                                    <th>&nbsp;</th>
+                                </tr>
+                            </thead>
+                            <tbody>
                                 <?php
-                                $classes = array("td-$key");
-                                if (!in_array($key, $visible)) {
-                                    $classes[] = 'hide' ;
-                                }
-                                if (isset($stats[$key]) && $stats[$key] != '0') {
-                                    $classes[] = 'hasValue';
-                                }
-                                $cssClass = '' ;
-                                if (count($classes) > 0) {
-                                    $cssClass = ' class = "' . join(' ', $classes) . '"' ;
-                                }
-                                ?>
-                                <td <?php echo $cssClass; ?>
-                                    name="<?php echo $key ?>"><?php echo htmlspecialchars($item['value']) ?></td>
+                                foreach ($servers as $key => $server):
+                                    $stats = $console->getServerStats($server);
+                                    $label = $key;
+                                    if (empty($label) || is_numeric($label)) {
+                                        $label = $server;
+                                    }
+                                    ?>
+                                    <tr>
+                                        <?php if (empty($stats)): ?>
+                                            <td style="white-space: nowrap;"><?php echo htmlspecialchars($label) ?></td>
+                                        <?php else: ?>
+                                            <td  style="white-space: nowrap;"><a href="./?server=<?php echo htmlspecialchars($server) ?>" class="link-underline link-underline-opacity-0 link-underline-opacity-75-hover text-info-emphasis"><?php echo htmlspecialchars($label); ?></a></td>
+                                        <?php endif ?>
+                                        <?php foreach ($stats as $key => $item): ?>
+                                            <?php
+                                            $classes = array("td-$key");
+                                            if (!in_array($key, $visible)) {
+                                                $classes[] = 'd-none' ;
+                                            }
+                                            if (isset($stats[$key]) && $stats[$key] != '0') {
+                                                $classes[] = 'hasValue';
+                                            }
+                                            $cssClass = '' ;
+                                            if (count($classes) > 0) {
+                                                $cssClass = ' class = "' . join(' ', $classes) . '"' ;
+                                            }
+                                            ?>
+                                            <td <?php echo $cssClass; ?>
+                                                name="<?php echo $key ?>"><?php echo htmlspecialchars($item['value']) ?></td>
+                                            <?php endforeach ?>
+                                            <?php if (empty($stats)): ?>
+                                            <td colspan="<?php echo count($visible) ?>" class="row-full">&nbsp;</td>
+                                        <?php endif ?>
+                                        <td class="text-center"><?php if (array_intersect(array($server), $cookieServers)): ?>
+                                                <a class="btn btn-sm btn-danger" title="Remove from list" href="./?action=serversRemove&removeServer=<?php echo htmlspecialchars($server) ?>"><i class="ri-subtract-line"></i></a>
+                                                <?php endif; ?>
+                                        </td>
+                                    </tr>
                                 <?php endforeach ?>
-                                <?php if (empty($stats)): ?>
-                                <td colspan="<?php echo count($visible) ?>" class="row-full">&nbsp;</td>
-                            <?php endif ?>
-                            <td><?php if (array_intersect(array($server), $cookieServers)): ?>
-                                    <a class="btn btn-xs btn-danger" title="Remove from list" href="./?action=serversRemove&removeServer=<?php echo htmlspecialchars($server) ?>"><span
-                                            class="glyphicon glyphicon-minus"></span></a>
-                                    <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach ?>
-                </tbody>
-            </table>
-            <a href="#servers-add" role="button" class="btn btn-info" id="addServer">Add server</a>
+                            </tbody>
+                        </table>
+                        <a href="#servers-add" role="button" class="btn btn-info mt-2" id="addServer">Add server</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 <?php else: ?>
     <div class="site-wrapper">
         <div class="site-wrapper-inner">
-            <div class="col-sm-8 col-sm-push-2 text-center">
+            <div class="col text-center">
                 <h1>Hello!</h1>
 
                 <p class="lead">
@@ -99,7 +104,7 @@ if (!empty($servers)):
                 </ol>
                 </p>
                 <p>
-                    <br/><a href="#servers-add" role="button" class="btn btn-lg btn-success" data-toggle="modal">Add server</a>
+                    <br/><a href="#servers-add" role="button" class="btn btn-lg btn-success" data-bs-toggle="modal" data-bs-target="#servers-add">Add server</a>
                 </p>
             </div>
         </div>

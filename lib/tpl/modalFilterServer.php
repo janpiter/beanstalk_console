@@ -2,18 +2,20 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                <h3 id="filter-label" class="text-info">Filter columns</h3>
+                <h5 class="modal-title" id="filter-label">Filter columns</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form class="form-group">
                     <div class="tabbable">
-                        <ul class="nav nav-tabs">
+                        <ul class="nav nav-tabs nav-justified" id="tab-filter-columns">
                             <?php
                             $i = 0;
                             foreach ($console->getServerStatsGroups() as $groupName => $fields): $i++;
                                 ?>
-                                <li <?php if ($i == 1) echo 'class="active"' ?>><a href="#<?php echo $groupName ?>" data-toggle="tab"><?php echo $groupName ?></a></li>
+                                <li class="nav-item  <?php if ($i == 1) echo 'active' ?>">
+                                    <button class="nav-link <?php if ($i == 1) echo 'active' ?>" id="<?php echo $groupName ?>-tab" data-bs-toggle="tab" data-bs-target="#<?php echo $groupName ?>" role="tab" type="button" aria-controls="<?php echo $groupName ?>"><?php echo ucfirst($groupName) ?></button>
+                                </li>
                             <?php endforeach ?>
                         </ul>
                         <div class="tab-content">
@@ -21,19 +23,15 @@
                             $i = 0;
                             foreach ($console->getServerStatsGroups() as $groupName => $fields): $i++;
                                 ?>
-                                <div class="tab-pane <?php if ($i == 1) echo 'active' ?>" id="<?php echo $groupName ?>">
+                                <div class="tab-pane <?php if ($i == 1) echo 'active' ?> pt-3" id="<?php echo $groupName ?>" role="tabpanel" aria-labelledby="<?php echo $groupName ?>-tab" tabindex="0">
                                     <?php foreach ($fields as $key => $description): ?>
-                                        <div class="control-group">
-                                            <div class="controls">
-                                                <div class="checkbox">
-                                                    <label>
-                                                        <input type="checkbox" name="<?php echo $key ?>" <?php if (in_array($key, $visible)) echo 'checked="checked"' ?>>
-                                                        <b><?php echo $key ?></b>
-                                                        <br/><?php echo $description ?>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" id="f-<?php echo $key ?>"name="<?php echo $key ?>" <?php if (in_array($key, $visible)) echo 'checked="checked"' ?>>
+                                            <label class="form-check-label align-top ps-1" for="f-<?php echo $key ?>" style="max-width: 95%">
+                                                <p class="fw-bold mb-0"><?php echo ucfirst(str_replace('-', ' ', $key)) ?></p>
+                                                <p class="mb-2 text-secondary text-wrap"><small><?php echo ucfirst($description) ?></small></p>
+                                            </label>
+                                        </div>  
                                     <?php endforeach ?>
                                 </div>
                             <?php endforeach ?>
@@ -42,7 +40,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+                <button class="btn" data-bs-dismiss="modal" aria-hidden="true">Close</button>
             </div>
         </div>
     </div>

@@ -2,14 +2,13 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                <h4 id="settings-label" class="modal-title">Add to samples</h4>
+                <h5 id="settings-label" class="modal-title">Add to samples</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" name="tube" value="<?php echo $tube; ?>"/>
                 <fieldset>
-                    <div class="alert alert-error hide" id="sampleSaveAlert">
-                        <button type="button" class="close" data-dismiss="alert">×</button>
+                    <div class="alert alert-error d-none" id="sampleSaveAlert">
                         <span><strong>Error!</strong> Required fields are marked *</span>
                     </div>
                     <input type="hidden" name="addsamplejobid" id="addsamplejobid">
@@ -21,7 +20,7 @@
                         <input class="form-control focused" id="addsamplename" name="addsamplename" type="text" value="" autocomplete="off">
                     </div>
                 </fieldset>
-                <div>
+                <div class="mt-3">
                     <label class="control-label" for="focusedInput"><b>Available on tubes *</label>
                     <?php
                     foreach ($tubes as $t):
@@ -30,19 +29,17 @@
                             $checked = 'checked="checked"';
                         }
                         ?>
-                        <div class="form-group">
-                            <div class="checkbox">
-                                <label>
-                                    <input type="checkbox" autocomplete="off" name="tubes[<?php echo $t ?>]" value="1" <?php echo $checked; ?>>
-                                    <?php echo $t ?>
-                                </label>
-                            </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" autocomplete="off" name="tubes[<?php echo $t ?>]" id="move-<?php echo $t ?>" value="1" <?php echo $checked; ?>>
+                            <label class="form-check-label align-top ps-1" for="move-<?php echo $t ?>">
+                                <?php echo $t ?>
+                            </label>
                         </div>
                     <?php endforeach ?>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+                <button class="btn" data-bs-dismiss="modal" aria-hidden="true">Close</button>
                 <a href="#" class="btn btn-success" id="sampleSave">Save</a>
             </div>
         </div>
