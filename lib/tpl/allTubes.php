@@ -5,7 +5,7 @@ $visible = $console->getTubeStatVisible();
 ?>
 
 <section id="summaryTable">
-    <div class="row">
+    <div class="row pb-5 mb-5">
         <div class="col-md-12 col-12 mt-4">
             <div class="card bg-body border-0 shadow-sm">
                 <div class="card-body">

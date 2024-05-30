@@ -11,15 +11,17 @@ $visible = $console->getTubeStatVisible();
                         <table class="table table-striped table-hover">
                             <thead>
                                 <tr>
-                                    <th>name</th>
+                                    <th>Tube Name</th>
                                     <?php
                                     foreach ($fields as $key => $item) {
                                         $markHidden = !in_array($key, $visible) ? ' class="d-none"' : '';
                                         if (in_array($key, array('current-jobs-buried', 'current-jobs-delayed', 'current-jobs-ready'))) {
                                             ?>
-                                            <th<?php echo $markHidden ?>  name="<?php echo $key ?>" title="<?php echo $item ?>"><a class="a-unstyled" href="#" onclick="document.getElementById('<?php echo $key; ?>').scrollIntoView(true);return false;"><?php echo $key ?><b class="caret"></b></a></th>
+                                            <th<?php echo $markHidden ?>  name="<?php echo $key ?>" title="<?php echo $item ?>"><a class="a-unstyled" href="#" onclick="document.getElementById('<?php echo $key; ?>').scrollIntoView(true);return false;"><?php echo ucfirst(str_replace('-', ' ', $key)) ?><b class="caret"></b></a></th>
                                                 <?php } else { ?>
-                                            <th<?php echo $markHidden ?>  name="<?php echo $key ?>" title="<?php echo $item ?>"><?php echo $key ?></th>
+                                            <th<?php echo $markHidden ?>  name="<?php echo $key ?>" title="<?php echo $item ?>">
+                                                <?php echo ucfirst(str_replace('-', ' ', $key)) ?>        
+                                            </th>
                                             <?php
                                         }
                                     }
