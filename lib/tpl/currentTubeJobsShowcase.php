@@ -20,9 +20,7 @@
     ?>
         <div class="col-12 col-sm-4">
         <div class="card bg-body border-0 shadow-sm">
-<div class="card-body" style="min-height: 924.5px">
-        <!-- <div class="col-12 col-sm-12"> -->
-        
+        <div class="card-body">        
             <a id="current-jobs-<?php echo $state ?>"></a>
             <div class="text-start">
                 <h5 class="mb-2 fw-bold">Next job in <span style="color:<?php echo $color?>"><?php echo $state ?></span> state</h5>
@@ -186,7 +184,7 @@
                                                     </button>
                                                 </div>
                                                 <div class="col-12 json">
-                                                    <pre id="json-viewer-<?php echo $state ?>" class="json-viewer mb-0 <?php echo $state ?> rounded-2 mt-2" data-bs-custom-class="custom-popover" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="Job data copied to clipboard" data-json="<?php echo htmlspecialchars($job['data']) ?>" style="min-height: 500px;max-height: 500px;overflow-y: scroll;font-size: 12px!important">
+                                                    <pre id="json-viewer-<?php echo $state ?>" class="json-viewer mb-0 <?php echo $state ?> rounded-2 mt-2" data-bs-custom-class="custom-popover" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="Job data copied to clipboard" data-json="<?php echo htmlspecialchars($job['data']) ?>" style="max-height: 500px;overflow-y: scroll;font-size: 12px!important">
                                                     </pre>
                                                 </div>
                                             </div>
@@ -202,8 +200,8 @@
                 <!-- <i>empty</i> -->
                 <div class="row">
                     <div class="col text-center">
-                        <img src="assets/empty.svg" class="img-fluid pt-1 opacity-25" alt="Empty" width="200">
-                        <h6 class="text-body-tertiary m-0">Empty</h6>
+                        <img src="assets/empty.svg" class="img-fluid pt-2 opacity-25" alt="Empty" width="200">
+                        <h6 class="text-body-tertiary m-0 pb-3">Empty</h6>
                     </div>
                 </div>
             <?php endif ?>
