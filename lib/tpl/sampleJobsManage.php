@@ -7,7 +7,7 @@ if (!empty($sampleJobs)) {
     }
     if (isset($_SESSION['info'])) {
         ?>
-        <div class="alert alert-info" id="sampleSaveAlert">
+        <div class="alert alert-info mt-3" id="sampleSaveAlert">
             <span><?php echo $_SESSION['info']; ?></span>
         </div>
         <script>
@@ -35,9 +35,9 @@ if (!empty($sampleJobs)) {
                             <table class="table table-striped border-dark-subtle align-middle mb-0">
                                 <thead>
                                 <tr>
-                                    <th scope="col" class="col-9">Name</th>
+                                    <th scope="col">Name</th>
                                     <th scope="col">Kick job to tubes</th>
-                                    <th scope="col">Action</th>
+                                    <th scope="col" class="text-center">Action</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -84,12 +84,12 @@ if (!empty($sampleJobs)) {
                                             }
                                             ?>
                                         </td>
-                                        <td class="">
+                                        <td class="text-center">
                                             <a class="btn btn-default bg-black bg-opacity-50 btn-sm" href="./?action=editSample&key=<?php echo $key ?>">
                                                 <i class="ri-pencil-fill"></i> Edit
                                             </a>
                                             <a class="btn btn-sm btn-danger border-0" href="./?action=deleteSample&key=<?php echo $key ?>">
-                                                <i class="ri-delete-bin-line"></i> Delete
+                                                <i class="ri-delete-bin-line"></i>  Delete
                                             </a>
                                         </td>
                                     </tr>

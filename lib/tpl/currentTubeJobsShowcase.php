@@ -23,7 +23,26 @@
         <div class="card-body">        
             <a id="current-jobs-<?php echo $state ?>"></a>
             <div class="text-start">
-                <h5 class="mb-2 fw-bold">Next job in <span style="color:<?php echo $color?>"><?php echo $state ?></span> state</h5>
+                <h5 class="mb-2 fw-bold d-inline">Next job in <span style="color:<?php echo $color?>"><?php echo $state ?></span> state</h5>
+                <?php if ($job): ?>
+                    <div class="dropdown float-end">
+                        <button class="btn btn-default btn-sm border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-target="#opt-<?php echo $state; ?>">
+                            <i class="ri-more-fill"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" id="opt-<?php echo $state; ?>">
+                            <li>
+                                <a data-bs-toggle="tooltip" data-bs-title="Delete all <?php echo $state ?> jobs" class="dropdown-item fs-14px" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteAll&count=1" onclick="return confirm('This process might hang a while on tubes with lots of jobs. Are you sure you want to continue?');">
+                                    Delete all <?php echo $state ?> jobs
+                               </a>
+                            </li>
+                            <li>
+                               <a class="dropdown-item fs-14px btn-move-all-job" type="button" data-state="<?php echo $state ?>">
+                                Move all <?php echo $state ?> to ..
+                               </a>
+                            </li>
+                        </ul>
+                    </div>
+                <?php endif ?>
                 <hr>
             </div>
             <div class="clearfix"></div>
@@ -122,66 +141,17 @@
                                             <div class="row">
                                                 <div class="col-8 text-start d-inline">
                                                     <a class="btn btn-sm btn-dark addSample" data-jobid="<?php echo $job['id']; ?>" data-bs-toggle="tooltip" data-bs-title="Add to samples" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=addSample">
-                                                       <!-- <i class="ri-add-line"></i> Add to samples -->
                                                        <i class="ri-add-line"></i>
                                                    </a>
-                                                    <div class="btn-group rounded-1" role="group" data-bs-toggle="tooltip" data-bs-title="Move all <?php echo $state ?> to">
-                                                        <button class="btn btn-dark btn-sm rounded-1" type="button" data-bs-toggle="dropdown">
-                                                            <i class="ri-arrow-right-fill"></i>
-                                                             <!-- Move all <?php echo $state ?> to -->
-                                                        </button>
-                                                        <ul class="dropdown-menu" style="max-height: 300px;overflow-y: scroll;">
-                                                            <li><h6 class="dropdown-header">Move all <?php echo $state ?> to</h6></li>
-                                                            <li>
-                                                                <span class="dropdown-item-text"><input class="moveJobsNewTubeName form-control form-control-sm" type="text" class="dropdown-item"
-                                                                       data-href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&state=<?php echo $state; ?>&destTube="
-                                                                       placeholder="New tube name"/>
-                                                                </span>
-                                                            </li>
-                                                                <?php
-                                                                if (isset($tubes) && is_array($tubes) && count($tubes)) {
-                                                                    foreach ($tubes as $key => $name) {
-                                                                        ?>
-                                                                    <li>
-                                                                        <a class="dropdown-item  fs-14px" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&destTube=<?php echo $name; ?>&state=<?php echo $state; ?>"><?php echo htmlspecialchars($name); ?></a>
-                                                                    </li>
-                                                                    <?php
-                                                                }
-                                                                ?>
-                                                                <?php
-                                                            }
-                                                            ?>
-                                                            <?php
-                                                            if ($state == 'ready') {
-                                                                ?>
-                                                                <li class="dropdown-divider"></li>
-                                                                <li>
-                                                                    <a class="dropdown-item" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&destState=buried&state=<?php echo $state; ?>">Buried</a>
-                                                                </li>
-                                                                <?php
-                                                            }
-                                                            ?>
-                                                        </ul>
-                                                    </div>
-                                                    <a data-bs-toggle="tooltip" data-bs-title="Delete all <?php echo $state ?> jobs" class="btn btn-sm btn-dark"
-                                                       href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteAll&count=1"
-                                                       onclick="return confirm('This process might hang a while on tubes with lots of jobs. Are you sure you want to continue?');">
-                                                       <i class="ri-delete-bin-line"></i> 
-                                                       <!-- Delete all <?php echo $state ?> jobs -->
-                                                   </a>
-                                                    <a data-bs-toggle="tooltip" data-bs-title="Delete job" class="btn btn-sm btn-dark"
-                                                       href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteJob&jobid=<?php echo $job['id']; ?>">
-                                                       <i class="ri-close-line"></i> 
-                                                       <!-- Delete -->
-                                                   </a>
-                                                </div>
-                                                <div class="col-4 text-end d-inline">
-                                                    <!-- <button class="btn btn-expand <?php echo $state ?> btn-dark btn-sm" data-bs-toggle="tooltip" data-bs-title="Show in fullscreen">
-                                                        <i class="ri-fullscreen-line"></i>
-                                                    </button> -->
-                                                    <button class="btn btn-copy <?php echo $state ?> btn-dark btn-sm" data-bs-toggle="tooltip" data-bs-title="Copy to clipboard">
+                                                   <button class="btn btn-copy <?php echo $state ?> btn-dark btn-sm" data-bs-toggle="tooltip" data-bs-title="Copy to clipboard">
                                                         <i class="ri-file-copy-line"></i>
                                                     </button>
+                                                </div>
+                                                <div class="col-4 text-end d-inline">
+                                                    <a data-bs-toggle="tooltip" data-bs-title="Delete job" class="btn btn-sm bg-danger bg-opacity-50"
+                                                       href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteJob&jobid=<?php echo $job['id']; ?>">
+                                                       <i class="ri-delete-back-2-line"></i> 
+                                                   </a>
                                                 </div>
                                                 <div class="col-12 json">
                                                     <pre id="json-viewer-<?php echo $state ?>" class="json-viewer mb-0 <?php echo $state ?> rounded-2 mt-2" data-bs-custom-class="custom-popover" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="Job data copied to clipboard" data-json="<?php echo htmlspecialchars($job['data']) ?>" style="max-height: 500px;overflow-y: scroll;font-size: 12px!important">
@@ -196,8 +166,59 @@
 
                     </div>
                 </div>
+
+                <?php if ($job) { ?>
+                    <!-- Modal -->
+                    <div class="modal fade" id="modal-move-job-<?php echo $state ?>" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" data-state="<?php echo $state ?>">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5" id="exampleModalLabel">Move all <?php echo $state ?> jobs</h1>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body"> 
+                                    <div>
+                                        <div class="alert alert-danger alert-dismissible alert-move-job d-none px-2 py-1" role="alert">
+                                            Destination tube required!
+                                            <button type="button" class="btn-close p-2 fs-14px" data-bs-dismiss="alert" aria-label="Close"></button>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="new-<?php echo $state ?>-tube" class="form-label">New tube</label>
+                                        <input type="text" class="form-control form-control-sm" id="new-<?php echo $state ?>-tube" name="new-tube" data-state="<?php echo $state ?>" data-href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&state=<?php echo $state; ?>&destTube=" placeholder="New tube name">
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Existing tube</label>
+                                        <div class="row">
+                                            <div class="col-12" style="max-height: 250px;overflow-y: scroll;">
+                                                <?php 
+                                                if (isset($tubes) && is_array($tubes) && count($tubes)) {
+                                                    foreach ($tubes as $key => $name) { ?>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="existing-tube" value="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&destTube=<?php echo $name; ?>&state=<?php echo $state; ?>" id="tb-<?php echo $state ?>-<?php echo $name ?>">
+                                                        <label class="form-check-label fs-14px" for="tb-<?php echo $state ?>-<?php echo $name ?>"><?php echo htmlspecialchars($name); ?></label>
+                                                    </div>
+                                                <?php } } ?>
+                                                <?php if ($state == 'ready') { ?>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="existing-tube" value="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&destState=buried&state=<?php echo $state; ?>" id="tb-<?php echo $state ?>-buried">
+                                                        <label class="form-check-label fs-14px" for="tb-<?php echo $state ?>-buried">buried</label>
+                                                    </div>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-success btn-sm btn-move-job" data-state="<?php echo $state ?>">Move</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                <?php } ?>
             <?php else: ?>
-                <!-- <i>empty</i> -->
                 <div class="row">
                     <div class="col text-center">
                         <img src="assets/empty.svg" class="img-fluid pt-2 opacity-25" alt="Empty" width="200">

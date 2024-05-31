@@ -42,7 +42,7 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-default btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                 <a href="#" class="btn btn-sm btn-success" id="clearTubes">Clear selected tubes</a>
                 <br/><br/>
 

@@ -179,7 +179,46 @@ $(document).ready(
                         document.location.replace($(this).data('href') + ($(this).val()));
                     }
                 });
-                $(document).on('click', '#addServer', function () {
+
+                $('.btn-move-all-job').click(function(e) {
+                    var st = $(this).data('state');
+                    $(`#modal-move-job-${st}`).modal('show')
+                });
+                
+                $(`[name=new-tube]`).click(function(e) {
+                    var state = $(this).data('state')
+                    var radio_tube = `[id=modal-move-job-${state}] input[name=existing-tube]`
+                    $(radio_tube).removeAttr("checked")
+                });
+
+                $(`.btn-move-job`).click(function(e) {
+                    var state = $(this).data('state')
+                    var new_tube = $(`[id=modal-move-job-${state}] [name=new-tube]`)
+                    var radio_tube = `[id=modal-move-job-${state}] input[name=existing-tube]`
+                    var alert = `[id=modal-move-job-${state}] .alert-move-job`
+                    var existing_tube = $(`${radio_tube}:checked`).val()
+
+                    if (existing_tube) {
+                        document.location.replace(existing_tube)
+                    } else if (new_tube.val()) {
+                        link = `${new_tube.data('href')}${new_tube.val()}`
+                        document.location.replace(link)
+                    } else {
+                        $(alert).removeClass('d-none')
+                    }
+                })
+
+
+                $(document)
+                .on('shown.bs.modal', '[id^=modal-move-job]', function(e) {
+                })
+                .on('hidden.bs.modal', '[id^=modal-move-job]', function(e) {
+                    var state = $(this).data('state')
+                    $(`[id=modal-move-job-${state}] [name=new-tube]`).val('')
+                    $(`[id=modal-move-job-${state}] input[name=existing-tube]`).removeAttr("checked")
+                    $(`[id=modal-move-job-${state}] .alert-move-job`).addClass('d-none')
+                })
+                .on('click', '#addServer', function () {
                     $('#servers-add').modal('toggle');
                     return false;
                 });
@@ -361,10 +400,9 @@ $(document).ready(
                         var $td1 = $(td1[i]), color = $td1.css('background-color');
                         $td1.css({
                             'background-color': '#1d788a',
-                            'border-radius': '11px'
+                            'border-radius': '11px',
                         }).animate({
                             'background-color': color,
-                            'border-radius': '0'
                         }, 500);
                         if (l.trim() != '0') {
                             $td1.addClass('hasValue');

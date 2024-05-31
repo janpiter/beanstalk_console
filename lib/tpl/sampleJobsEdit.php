@@ -51,26 +51,26 @@ if (isset($isNewRecord) && $isNewRecord) {
                                     ?>
                                     <div class="col-12">
                                         <label class="form-label">Saved to</label>
-                                        <?php
-                                        foreach ($job['tubes'] as $t => $val) {
-                                            $checked = '';
-                                            if (@array_key_exists($t, $job['tubes'])) {
-                                                $checked = 'checked="checked"';
-                                            }
-                                            ?>
-                                            <div class="card">
-                                                <div class="card-body px-3 py-2">
+                                        <ul class="list-group">
+                                            <?php
+                                            foreach ($job['tubes'] as $t => $val) {
+                                                $checked = '';
+                                                if (@array_key_exists($t, $job['tubes'])) {
+                                                    $checked = 'checked="checked"';
+                                                }
+                                                ?>
+                                                <li class="list-group-item">
                                                     <div class="form-check">
                                                         <input type="checkbox" class="form-check-input" autocomplete="off" name="tubes[<?php echo $t ?>]" value="1" id="st-<?php echo $t ?>" <?php echo $checked; ?>>
                                                         <label class="form-check-label w-100" for="st-<?php echo $t ?>">
                                                             <?php echo $t ?>
                                                         </label>
                                                     </div>
-                                                </div>
-                                            </div>
-                                            <?php
-                                        }
-                                        ?>
+                                                </li>
+                                                <?php
+                                            }
+                                            ?>
+                                        </ul>
                                     </div>
                                     <?php
                                 }

@@ -24,7 +24,7 @@ if (!empty($servers)):
         <div class="col-md-12 col-12 mt-4">
             <div class="card bg-body border-0 shadow-sm">
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <div class="table-responsive mb-2">
                         <table class="table table-striped border-dark-subtle align-middle mb-0" id="servers-index">
                             <thead>
                                 <tr>
@@ -72,46 +72,44 @@ if (!empty($servers)):
                                             <td colspan="<?php echo count($visible) ?>" class="row-full">&nbsp;</td>
                                         <?php endif ?>
                                         <td class="text-center"><?php if (array_intersect(array($server), $cookieServers)): ?>
-                                                <a class="btn btn-sm btn-danger" title="Remove from list" href="./?action=serversRemove&removeServer=<?php echo htmlspecialchars($server) ?>" style="padding: 2px 5px">Remove</a>
+                                                <a class="btn btn-sm btn-danger bg-danger bg-opacity-50 border-danger border-opacity-25" data-bs-toggle="tooltip" data-bs-html="true" data-bs-title="Remove server <?php echo htmlspecialchars($server) ?><br>from list" href="./?action=serversRemove&removeServer=<?php echo htmlspecialchars($server) ?>" style="padding: 2px 5px"><i class="ri-delete-back-2-line"></i></a>
                                                 <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach ?>
                             </tbody>
                         </table>
-                        <a href="#servers-add" role="button" class="btn btn-success btn-sm mt-3" id="addServer">Add server</a>
+                        <a href="#servers-add" role="button" class="btn btn-success btn-sm mt-3 float-end" id="addServer">Add server</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 <?php else: ?>
-    <div class="site-wrapper">
-        <div class="site-wrapper-inner">
-            <div class="col text-center">
-                <h1>Hello!</h1>
-
-                <p class="lead">
-                    This is Beanstalk console,<br/>web-interface for
-                    <a href="http://kr.github.io/beanstalkd/" target="_blank">simple and fast work queue</a>
-                </p>
-
-                <p>
-                    Your servers' list is empty. You could fix it in two ways:
-                <ol class="inside">
-                    <li>Click the button below to add server just for you and save it in cookies</li>
-                    <li>Edit <b>config.php</b> file and add server for everybody</li>
-                </ol>
-                </p>
-                <p>
-                    <br/><a href="#servers-add" role="button" class="btn btn-lg btn-success" data-bs-toggle="modal" data-bs-target="#servers-add">Add server</a>
-                </p>
+    <div class="row justify-content-center">
+        <div class="col-11 col-sm-6">
+            <div class="card bg-body border-0 shadow-sm mt-5">
+                <div class="row g-0">
+                    <div class="col-md-4 bg-success rounded-start bg-opacity-25">
+                        <img src="assets/empty.svg" class="img-fluid rounded-start opacity-25 mt-sm-4 mt-0" alt="Empty">
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card-body">
+                            <p class="fs-1">Hello!</p>
+                            <p class="card-text">This is Beanstalk console,<br/>web-interface for
+                                <a class="text-info-emphasis" href="http://kr.github.io/beanstalkd/" target="_blank">simple and fast work queue</a>.</p>
+                            <p class="card-text mb-0">Your servers' list is empty. You could fix it in two ways:</p>
+                            <p class="ps-1 lh-base mb-0">1. Click the button below to add server just for you and save it in cookies</p>
+                            <p class="ps-1 lh-base mb-0">2. Edit <b>config.php</b> file and add server for everybody</p>
+                        </div>
+                        <div class="card-body text-end">
+                            <a href="#servers-add" role="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#servers-add">Add server</a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-
-
-
 <?php
 endif;
 if ($tplVars['_tplMain'] != 'ajax') {

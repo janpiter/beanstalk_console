@@ -50,7 +50,7 @@
                         </div>
             </div>
             <div class="modal-footer">
-                <a href="#" class="btn btn-sm" data-bs-dismiss="modal">Close</a>
+                <a href="#" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</a>
                 <a href="#" class="btn btn-sm btn-success" id="tubeSave">Save changes</a>
             </div>
             </fieldset>

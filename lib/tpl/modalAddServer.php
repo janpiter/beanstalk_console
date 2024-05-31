@@ -21,7 +21,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-sm" data-bs-dismiss="modal" aria-hidden="true">Cancel</button>
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal" aria-hidden="true">Cancel</button>
                 <button class="btn btn-sm btn-success btn-add-server">Save</button>
             </div>
         </div>

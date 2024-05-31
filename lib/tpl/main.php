@@ -22,7 +22,7 @@ if ($server) {
         <link href="assets/vendor/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
         <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
-        <link href="assets/vendor/json-viewer/jquery.json-viewer.css" rel="stylesheet">
+        <link href="assets/vendor/json-viewer/jquery.json-viewer.css?_ver=<?php echo time(); ?>" rel="stylesheet">
         <link href="css/customer.css?_ver=<?php echo time(); ?>" rel="stylesheet">
         <link href="highlight/styles/magula.css" rel="stylesheet">
         <link rel="shortcut icon" href="assets/favicon.ico">
@@ -41,7 +41,7 @@ if ($server) {
     <?php if (!empty($servers)): ?>
         <body class="no-nav bg-body-tertiary mt-3" data-bs-theme="dark">
         <?php else: ?>
-        <body class="no-nav bg-body-tertiary mt-3" data-bs-theme="dark">
+        <body class="bg-body-tertiary" data-bs-theme="dark">
         <?php endif ?>
 
         <div class="container-fluid">

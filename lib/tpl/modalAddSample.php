@@ -41,7 +41,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-sm" data-bs-dismiss="modal" aria-hidden="true">Close</button>
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal" aria-hidden="true">Close</button>
                 <a href="#" class="btn btn-sm btn-success" id="sampleSave">Save</a>
             </div>
         </div>

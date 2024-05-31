@@ -12,6 +12,7 @@ ul.json-dict, ol.json-array {
 }
 .json-string {
   color: #0B7500;
+  color: #4ba578;
 }
 .json-literal {
   color: #1A01CC;

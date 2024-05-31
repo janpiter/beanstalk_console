@@ -41,7 +41,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-sm btn-success" data-bs-dismiss="modal" aria-hidden="true">Close</button>
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal" aria-hidden="true">Close</button>
             </div>
         </div>
     </div>
