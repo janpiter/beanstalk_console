@@ -15,7 +15,6 @@
 }
 ::-webkit-scrollbar-track {
     background: transparent;
-    background: #212529;
     border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb {
