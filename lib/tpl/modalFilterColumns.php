@@ -13,7 +13,7 @@
                         foreach ($groups as $groupName => $items): $i++;
                             ?>
                             <li class="nav-item">
-                                <button class="nav-link <?php if ($i == 1) echo 'active' ?>" id="<?php echo $groupName ?>-tab" data-bs-toggle="tab" data-bs-target="#<?php echo $groupName ?>" role="tab" type="button" aria-controls="<?php echo $groupName ?>"><?php echo ucfirst($groupName) ?></button>
+                                <button class="nav-link text-body <?php if ($i == 1) echo 'active' ?>" id="<?php echo $groupName ?>-tab" data-bs-toggle="tab" data-bs-target="#<?php echo $groupName ?>" role="tab" type="button" aria-controls="<?php echo $groupName ?>"><?php echo ucfirst($groupName) ?></button>
                             </li>
                         <?php endforeach ?>
                     </ul>
@@ -41,7 +41,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-success" data-bs-dismiss="modal" aria-hidden="true">Close</button>
+                <button class="btn btn-sm btn-success" data-bs-dismiss="modal" aria-hidden="true">Close</button>
             </div>
         </div>
     </div>

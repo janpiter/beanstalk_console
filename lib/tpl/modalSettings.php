@@ -7,26 +7,26 @@
             </div>
             <div class="modal-body">
                 <fieldset>
-                    <div class="form-group">
-                        <label for="tubePauseSeconds">
+                    <div>
+                        <label class="form-label" for="tubePauseSeconds">
                             <b>Tube pause seconds</b>
                             <p class="mb-0 lh-1 text-body-tertiary"><small>(<i>-1</i> means the default: <i>3600</i>, <i>0</i> is reserved for
                             un-pause)</small></p>
                         </label>
 
-                        <input class="form-control focused" id="tubePauseSeconds" type="text" value="<?php
+                        <input class="form-control form-control-sm focused" id="tubePauseSeconds" type="text" value="<?php
                         if (@empty($_COOKIE['tubePauseSeconds']))
                             echo -1;
                         else
                             echo @intval($_COOKIE['tubePauseSeconds']);
                         ?>">
                     </div>
-                    <div class="form-group mt-3">
-                        <label for="focusedInput">
+                    <div class="mt-3">
+                        <label class="form-label" for="focusedInput">
                             <b>Auto-refresh interval in milliseconds</b>
                             <p class="mb-0 lh-1 text-body-tertiary"><small>(Default: <i>500</i>)</small></p>
                         </label>
-                        <input class="form-control focused" id="autoRefreshTimeoutMs" type="text" value="<?php
+                        <input class="form-control form-control-sm focused" id="autoRefreshTimeoutMs" type="text" value="<?php
                         if (@empty($_COOKIE['autoRefreshTimeoutMs']))
                             echo 500;
                         else
@@ -40,12 +40,12 @@
                             </label>
                         </div>
                     </div>
-                    <div class="form-group mt-3">
-                        <label for="focusedInput">
+                    <div class="mt-3">
+                        <label class="form-label" for="focusedInput">
                             <b>Search result limits</b>
                             <p class="mb-0 lh-1 text-body-tertiary"><small>(Default: <i>25</i>)</small></p>
                         </label>
-                        <input class="form-control focused" id="searchResultLimit" type="text" value="<?php
+                        <input class="form-control form-control-sm focused" id="searchResultLimit" type="text" value="<?php
                         if (@empty($_COOKIE['searchResultLimit']))
                             echo 25;
                         else
@@ -99,7 +99,7 @@
                 </fieldset>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-default" data-bs-dismiss="modal" aria-hidden="true">Close</button>
+                <button class="btn btn-sm btn-success" data-bs-dismiss="modal" aria-hidden="true">Close</button>
             </div>
 
         </div>

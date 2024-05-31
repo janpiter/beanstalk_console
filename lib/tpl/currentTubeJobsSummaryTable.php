@@ -8,7 +8,7 @@ $visible = $console->getTubeStatVisible();
             <div class="card bg-body border-0 shadow-sm  rounded-top-2 rounded-bottom-0">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover">
+                        <table class="table table-striped border-dark-subtle align-middle mb-0">
                             <thead>
                                 <tr>
                                     <th>Tube Name</th>

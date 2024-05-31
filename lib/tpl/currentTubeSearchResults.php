@@ -7,7 +7,7 @@ include('currentTubeJobsSummaryTable.php');
         <div class="col-md-12 col-12">
             <div class="card bg-body border-0 rounded-bottom-2 rounded-top-0 shadow-sm">
                 <div class="card-body pt-0">
-                    <a class="btn btn-info btn-sm" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>"><i class="ri-arrow-left-line"></i> Back to tube</a>
+                    <a class="btn btn-default bg-black bg-opacity-50 btn-sm" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>"><i class="ri-arrow-left-line"></i> Back to tube</a>
                 </div>
             </div>
         </div>
@@ -43,24 +43,22 @@ if ($searchResults['total'] > 0) {
                                                 </td>
                                                 <td class="text-center">
                                                     <div class="dropdown">
-                                                        <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu1" data-bs-toggle="dropdown" aria-expanded="true">
+                                                        <button class="btn btn-default bg-black bg-opacity-50 btn-sm dropdown-toggle" type="button" id="dropdownMenu1" data-bs-toggle="dropdown" aria-expanded="true">
                                                             Actions
                                                             <span class="caret"></span>
                                                         </button>
                                                         <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
                                                             <li role="presentation"><a role="menuitem" class="addSample dropdown-item" data-jobid="<?php echo $job->getId(); ?>"
                                                                                        href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=addSample">
-                                                                    <i class="glyphicon glyphicon-plus glyphicon-white"></i>
+                                                                    <i class="ri-add-line"></i>
                                                                     Add to samples</a>
                                                             </li>
                                                             <li role="presentation"><a role="menuitem"
-                                                                                       href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteJob&jobid=<?php echo $job->getId(); ?>" class="dropdown-item"><i
-                                                                        class="glyphicon glyphicon-remove glyphicon-white"></i>
+                                                                                       href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteJob&jobid=<?php echo $job->getId(); ?>" class="dropdown-item"><i class="ri-close-line"></i>
                                                                     Delete</a>
                                                             </li>
                                                             <li role="presentation"><a class="dropdown-item" role="menuitem"
-                                                                                       href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=kickJob&jobid=<?php echo $job->getId(); ?>"><i
-                                                                        class="glyphicon glyphicon-forward glyphicon-white"></i>
+                                                                                       href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=kickJob&jobid=<?php echo $job->getId(); ?>"><i class="ri-speed-mini-fill"></i>
                                                                     Kick</a>
                                                             </li>
                                                         </ul>

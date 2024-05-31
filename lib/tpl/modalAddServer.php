@@ -7,28 +7,22 @@
             </div>
             <div class="modal-body">
                 <form class="form-horizontal">
-                    <div class="form-group">
-                        <label class="control-label col-sm-2" for="host">Host</label>
-
-                        <div class="col">
-                            <input type="text" id="host" value="localhost" class="form-control">
-                        </div>
+                    <div>
+                        <label class="form-label" for="host">Host</label>
+                        <input type="text" id="host" value="localhost" class="form-control form-control-sm">
                     </div>
 
-                    <div class="form-group">
-                        <label class="control-label col-sm-2" for="port">Port</label>
-
-                        <div class="col">
-                            <input type="text" id="port" value="<?php echo Pheanstalk::DEFAULT_PORT ?>" class="form-control">
-                        </div>
+                    <div class="mt-3">
+                        <label class="form-label" for="port">Port</label>
+                        <input type="text" id="port" value="<?php echo Pheanstalk::DEFAULT_PORT ?>" class="form-control form-control-sm">
                     </div>
 
 
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn" data-bs-dismiss="modal" aria-hidden="true">Cancel</button>
-                <button class="btn btn-info">Save</button>
+                <button class="btn btn-sm" data-bs-dismiss="modal" aria-hidden="true">Cancel</button>
+                <button class="btn btn-sm btn-success">Save</button>
             </div>
         </div>
     </div>

@@ -15,6 +15,7 @@ ul.json-dict, ol.json-array {
 }
 .json-literal {
   color: #1A01CC;
+  color: #55b9e1;
   font-weight: bold;
 }
 

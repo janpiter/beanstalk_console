@@ -13,34 +13,36 @@
                     </div>
                     <input type="hidden" name="addsamplejobid" id="addsamplejobid">
 
-                    <div class="form-group">
-                        <label for="addsamplename"
+                    <div>
+                        <label class="form-label" for="addsamplename"
                                title="You can highlight text inside the job, then hit the Add button, it will be automatically populated here."><b>Name *</b>
                             <i>(highlighted text is auto populated)</i></label>
-                        <input class="form-control focused" id="addsamplename" name="addsamplename" type="text" value="" autocomplete="off">
+                        <input class="form-control form-control-sm focused" id="addsamplename" name="addsamplename" type="text" value="" autocomplete="off">
                     </div>
                 </fieldset>
                 <div class="mt-3">
-                    <label class="control-label" for="focusedInput"><b>Available on tubes *</label>
-                    <?php
-                    foreach ($tubes as $t):
-                        $checked = '';
-                        if ($t == $tube) {
-                            $checked = 'checked="checked"';
-                        }
-                        ?>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" autocomplete="off" name="tubes[<?php echo $t ?>]" id="move-<?php echo $t ?>" value="1" <?php echo $checked; ?>>
-                            <label class="form-check-label align-top ps-1" for="move-<?php echo $t ?>">
-                                <?php echo $t ?>
-                            </label>
-                        </div>
-                    <?php endforeach ?>
+                    <label class="form-label" for="focusedInput"><b>Available on tubes *</label>
+                    <div style="max-height: 250px;overflow-y: scroll;">
+                        <?php
+                        foreach ($tubes as $t):
+                            $checked = '';
+                            if ($t == $tube) {
+                                $checked = 'checked="checked"';
+                            }
+                            ?>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" autocomplete="off" name="tubes[<?php echo $t ?>]" id="move-<?php echo $t ?>" value="1" <?php echo $checked; ?>>
+                                <label class="form-check-label align-top ps-1" for="move-<?php echo $t ?>">
+                                    <?php echo $t ?>
+                                </label>
+                            </div>
+                        <?php endforeach ?>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn" data-bs-dismiss="modal" aria-hidden="true">Close</button>
-                <a href="#" class="btn btn-success" id="sampleSave">Save</a>
+                <button class="btn btn-sm" data-bs-dismiss="modal" aria-hidden="true">Close</button>
+                <a href="#" class="btn btn-sm btn-success" id="sampleSave">Save</a>
             </div>
         </div>
     </div>

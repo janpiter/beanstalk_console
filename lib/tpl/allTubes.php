@@ -10,7 +10,7 @@ $visible = $console->getTubeStatVisible();
             <div class="card bg-body border-0 shadow-sm">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped table-dark table-borderless align-middle mb-0">
+                        <table class="table table-striped border-dark-subtle align-middle mb-0">
                             <thead class="">
                                 <tr>
                                     <th scope="col" class="">Tube Name</th>

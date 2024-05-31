@@ -53,7 +53,7 @@ if ($server) {
                             <img src="<?php echo "assets/favicon.ico"; ?>" alt="Beanstalk Console" width="18" height="22" class="pb-1">
                             <span>Beanstalk Console</span>
                         </a>
-                        <button class="border-0 btn btn-sm navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                        <button class="border-0 btn btn-sm navbar-toggler" style="padding-left: 5px;padding-right: 5px; " type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                             <i class="ri-menu-line"></i>
                         </button>
 
@@ -67,9 +67,9 @@ if ($server) {
                                             <?php echo $serverLabel ?> <span class="caret"></span>
                                         </a>
                                         <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="./?">All servers</a></li>
+                                            <li><a class="dropdown-item fs-14px" href="./?">All servers</a></li>
                                             <?php foreach (array_diff($servers, array($server)) as $key => $serverItem): ?>
-                                            <li><a class="dropdown-item" href="./?server=<?php echo htmlspecialchars($serverItem) ?>"><?php echo empty($key) || is_numeric($key) ? htmlspecialchars($serverItem) : $key ?></a></li>
+                                            <li><a class="dropdown-item fs-14px" href="./?server=<?php echo htmlspecialchars($serverItem) ?>"><?php echo empty($key) || is_numeric($key) ? htmlspecialchars($serverItem) : $key ?></a></li>
                                             <?php endforeach ?>
                                         </ul>
                                     </li>
@@ -79,9 +79,9 @@ if ($server) {
                                         <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                                             All servers <span class="caret"></span>
                                         </a>
-                                        <ul class="dropdown-menu">
+                                        <ul class="dropdown-menu" style="max-height: 350px;overflow-y: scroll;">
                                             <?php foreach ($servers as $key => $serverItem): ?>
-                                                <li><a class="dropdown-item" href="./?server=<?php echo htmlspecialchars($serverItem) ?>"><?php echo empty($key) || is_numeric($key) ? htmlspecialchars($serverItem) : $key ?></a></li>
+                                                <li><a class="dropdown-item fs-14px" href="./?server=<?php echo htmlspecialchars($serverItem) ?>"><?php echo empty($key) || is_numeric($key) ? htmlspecialchars($serverItem) : $key ?></a></li>
                                             <?php endforeach ?>
                                         </ul>
                                     </li>
@@ -93,10 +93,10 @@ if ($server) {
                                         <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                                             <?php echo $tube ?> <span class="caret"></span>
                                         </a>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="./?server=<?php echo $server ?>">All Tubes</a></li>
+                                        <ul class="dropdown-menu" style="max-height: 350px;overflow-y: scroll;">
+                                            <li><a class="dropdown-item fs-14px" href="./?server=<?php echo $server ?>">All Tubes</a></li>
                                             <?php foreach (array_diff($tubes, array($tube)) as $tubeItem): ?>
-                                                <li><a class="dropdown-item" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tubeItem) ?>"><?php echo $tubeItem ?></a></li>
+                                                <li><a class="dropdown-item  fs-14px" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tubeItem) ?>"><?php echo $tubeItem ?></a></li>
                                             <?php endforeach ?>
                                         </ul>
                                     </li>
@@ -106,9 +106,9 @@ if ($server) {
                                         <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                                             All tubes <span class="caret"></span>
                                         </a>
-                                        <ul class="dropdown-menu">
+                                        <ul class="dropdown-menu" style="max-height: 350px;overflow-y: scroll;">
                                             <?php foreach ($tubes as $tubeItem): ?>
-                                                <li><a class="dropdown-item" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tubeItem) ?>"><?php echo $tubeItem ?></a></li>
+                                                <li><a class="dropdown-item fs-14px" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tubeItem) ?>"><?php echo $tubeItem ?></a></li>
                                             <?php endforeach; ?>
                                         </ul>
                                     </li>
@@ -116,7 +116,7 @@ if ($server) {
                             </ul>
 
                             <?php if (isset($server, $tube) && $server && $tube) { ?>
-                                <form  class="d-flex" style="margin-top:5px;margin-bottom:0px;" role="search" action="" method="get">
+                                <form  class="d-flex" role="search" action="" method="get">
                                     <input type="hidden" name="server" value="<?php echo $server; ?>"/>
                                     <input type="hidden" name="tube" value="<?php echo urlencode($tube); ?>"/>
                                     <input type="hidden" name="state" value="<?php echo $state; ?>"/>
@@ -130,49 +130,55 @@ if ($server) {
 
                             <ul class="nav navbar-nav navbar-right">
                                 <li class="nav-item dropdown">
-                                    <a href="#" class="nav-link" data-bs-toggle="dropdown"><i class="ri-equalizer-2-line"></i></a>
+                                    <a href="#" class="nav-link" data-bs-toggle="dropdown">
+                                        <i class="ri-equalizer-2-line d-none d-sm-block"></i>
+                                            <span class="d-block d-sm-none text-start">Settings <span class="float-end"><i class="ri-equalizer-2-line pe-2"></i></span></span>
+                                    </a>
                                     <ul class="dropdown-menu dropdown-menu-end" role="menu">
                                         <?php if (!isset($_tplPage) && !$server) { ?>
-                                            <li><a class="dropdown-item" href="#filterServer" role="button" data-bs-toggle="modal">Filter columns</a></li>
+                                            <li><a class="dropdown-item fs-14px" href="#filterServer" role="button" data-bs-toggle="modal">Filter columns</a></li>
                                             <?php
                                         } elseif (!isset($_tplPage) && $server) {
                                             ?>
-                                            <li><a class="dropdown-item" href="#filter" role="button" data-bs-toggle="modal">Filter columns</a></li>
+                                            <li><a class="dropdown-item fs-14px" href="#filter" role="button" data-bs-toggle="modal">Filter columns</a></li>
                                             <?php
                                         }
                                         if ($server && !$tube) {
                                             ?>
-                                            <li><a class="dropdown-item" href="#clear-tubes" role="button" data-bs-toggle="modal">Clear multiple tubes</a></li>
+                                            <li><a class="dropdown-item fs-14px" href="#clear-tubes" role="button" data-bs-toggle="modal">Clear multiple tubes</a></li>
                                         <?php } ?>
-                                        <li><a class="dropdown-item" href="./?action=manageSamples" role="button">Manage samples</a></li>
-                                        <li class="divider"></li>
-                                        <li><a class="dropdown-item" href="https://github.com/kr/beanstalkd">Beanstalk (github)</a></li>
-                                        <li><a class="dropdown-item" href="https://github.com/kr/beanstalkd/blob/master/doc/protocol.txt">Protocol Specification</a></li>
-                                        <li><a class="dropdown-item" href="https://github.com/ptrofimov/beanstalk_console">Beanstalk console (github)</a></li>
-                                        <li class="divider"></li>
-                                        <li><a class="dropdown-item" href="#settings" role="button" data-bs-toggle="modal">Edit settings</a></li>
+                                        <li><a class="dropdown-item fs-14px" href="./?action=manageSamples" role="button">Manage samples</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item fs-14px" href="https://github.com/kr/beanstalkd">Beanstalk (github) <i class="ri-external-link-fill"></i></a></li>
+                                        <li><a class="dropdown-item fs-14px" href="https://github.com/kr/beanstalkd/blob/master/doc/protocol.txt">Protocol Specification <i class="ri-external-link-fill"></i></a></li>
+                                        <li><a class="dropdown-item fs-14px" href="https://github.com/ptrofimov/beanstalk_console">Beanstalk console (github) <i class="ri-external-link-fill"></i></a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item fs-14px" href="#settings" role="button" data-bs-toggle="modal">Edit settings</a></li>
+
+                                        <?php if (@$config['auth']['enabled']) { ?>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item-text fs-14px" target="_blank" href="./?logout=true" role="button">
+                                                <button class="btn btn-sm btn-success w-100">Logout</button>
+                                            </a>
+                                        </li>
+                                        <?php } ?>
+
                                     </ul>
                                 </li>
 
-                                <?php if (@$config['auth']['enabled']) { ?>
-                                    <li class="nav-item pt-2">
-                                        <a target="_blank" href="./?logout=true" data-bs-toggle="tooltip" data-bs-title="Logout" data-bs-placement="left">
-                                            <button type="button" class="btn btn-default btn-sm rounded-circle">
-                                                <i class="ri-shut-down-line"></i>
-                                            </button>
-                                        </a>
-                                    </li>
-                                <?php } ?>
                                 <?php if ($server && !$tube) { ?>
-                                    <li class="nav-item pt-2">
-                                        <button type="button" id="autoRefresh" class="btn btn-default btn-sm rounded-circle" data-bs-toggle="tooltip" data-bs-title="Toggle auto refresh">
+                                    <li class="nav-item">
+                                        <button type="button" id="autoRefresh" class="btn btn-default btn-sm rounded-4 float-end" data-bs-toggle="tooltip" data-bs-title="Toggle auto refresh">
                                             <i class="ri-refresh-line"></i>
+                                            <span class="visually-hidden">New alerts</span>
                                         </button>
                                     </li>
                                 <?php } else if (!$tube) { ?>
-                                    <li class="nav-item pt-2">
-                                        <button type="button" id="autoRefreshSummary" class="btn btn-default btn-sm rounded-circle" data-bs-toggle="tooltip" data-bs-title="Toggle auto refresh">
+                                    <li class="nav-item">
+                                        <button type="button" id="autoRefreshSummary" class="btn btn-default btn-sm rounded-4 float-end" data-bs-toggle="tooltip" data-bs-title="Toggle auto refresh">
                                             <i class="ri-refresh-line"></i>
+                                            <span class="visually-hidden">New alerts</span>
                                         </button>
                                     </li>
                                 <?php } ?>
@@ -231,6 +237,10 @@ if ($server) {
                     <?php endif; ?>
                 </div>
 
+        </div>
+
+        <div class="scroll-top position-fixed bottom-0 end-0 me-4 mb-3 pe-3 d-none" title="scroll to top">
+            <button type="button" class="btn btn-sm text-white btn-success rounded-circle"><i class="ri-arrow-up-s-line"></i></button>
         </div>
 
         <script src='assets/vendor/jquery/jquery.js'></script>

@@ -5,15 +5,27 @@
 
 <div class="row g-2 mt-0">
 
-    <?php foreach ((array) $peek as $state => $job): ?>
+    <?php foreach ((array) $peek as $state => $job): 
+        switch ($state) {
+            case 'ready':
+                $color = '#198754';
+                break;
+            case 'delayed':
+                $color = '#d7be3a';
+                break;
+            default:
+                $color = '#e685b5';
+                break;
+        }
+    ?>
         <div class="col-12 col-sm-4">
         <div class="card bg-body border-0 shadow-sm">
-<div class="card-body" style="min-height: 934.5px">
+<div class="card-body" style="min-height: 924.5px">
         <!-- <div class="col-12 col-sm-12"> -->
         
             <a id="current-jobs-<?php echo $state ?>"></a>
             <div class="text-start">
-                <h5 class="mb-2 fw-bold">Next job in "<?php echo $state ?>" state</h5>
+                <h5 class="mb-2 fw-bold">Next job in <span style="color:<?php echo $color?>"><?php echo $state ?></span> state</h5>
                 <hr>
             </div>
             <div class="clearfix"></div>
@@ -25,25 +37,26 @@
                         <div class="row g-2">
                             <?php 
                             $keys_2 = array(
-                                'id' => array('name' => 'ID', 'icon' => 'ri-shield-keyhole-line'), 
-                                // 'state' => array('name' => 'State', 'icon' => 'ri-arrow-left-right-fill'), 
-                                'pri' => array('name' => 'Priority', 'icon' => 'ri-vip-crown-line'), 
+                                'id' => array('name' => 'ID', 'icon' => 'ri-key-fill'), 
+                                'pri' => array('name' => 'Priority', 'icon' => 'ri-skip-up-line'), 
                                 'ttr' => array('name' => 'TTR', 'icon' => 'ri-history-line'),
 
-                                'file' => array('name' => 'File', 'icon' => 'ri-file-4-line'),
-                                'reserves' => array('name' => 'Reserves', 'icon' => 'ri-loader-4-line'),
-                                'timeouts' => array('name' => 'Timeouts', 'icon' => 'ri-timer-flash-line'),
-                                'releases' => array('name' => 'Releases', 'icon' => 'ri-history-line'),
+                                'file' => array('name' => 'File', 'icon' => 'ri-file-paper-2-line'),
+                                'reserves' => array('name' => 'Reserves', 'icon' => 'ri-restart-line'),
+                                'timeouts' => array('name' => 'Timeouts', 'icon' => 'ri-pulse-fill'),
+                                'releases' => array('name' => 'Releases', 'icon' => 'ri-arrow-go-forward-fill'),
                                 'buries' => array('name' => 'Buries', 'icon' => 'ri-fire-line'),
                                 'kicks' => array('name' => 'Kicks', 'icon' => 'ri-speed-mini-fill'),
                             );
                             foreach ($keys_2 as $k => $v) { ?>
                                 <div class="col-md-4 col-6">
                                     <small class="text-body-tertiary fs-11px fw-semibold">
-                                        <i class="fw-normal <?php echo $v['icon'] ?>"></i>
-                                        <?php echo $v['name'] ?>
+                                        <small>
+                                            <i class="fw-normal <?php echo $v['icon'] ?>"></i>
+                                            <?php echo $v['name'] ?>
+                                        </small>
                                     </small>
-                                    <p class="mb-0 fs-13px item text-white">
+                                    <p class="mb-0 fs-13px item text-body">
                                         <?php echo $job['stats'][$k] ?>
                                     </p>
                                 </div>
@@ -59,19 +72,21 @@
                                         $icon = '<i class="ri-time-line fw-normal"></i>';
                                         break;
                                     case 'delay':
-                                        $icon = '<i class="ri-hourglass-2-fill fw-normal"></i>';
+                                        $icon = '<i class="ri-rest-time-line fw-normal"></i>';
                                         break;
                                     default:
-                                        $icon = '<i class="ri-timer-line fw-normal"></i>';
+                                        $icon = '<i class="ri-compass-2-line fw-normal"></i>';
                                         break;
                                 }
                             ?>
                                 <div class="col-md-4 col-12">
                                     <small class="text-body-tertiary fs-11px fw-semibold">
-                                        <?php echo $icon ?>
-                                        <?php echo ucfirst($k1) ?>
+                                        <small>
+                                            <?php echo $icon ?>
+                                            <?php echo str_replace('-', ' ', ucfirst($k1)) ?>
+                                        </small>
                                     </small>
-                                    <p class="mb-0 fs-13px item text-white" style="line-height: 1.5;min-height: 39px">
+                                    <p class="mb-0 fs-13px item text-body" style="line-height: 1.5;min-height: 39px">
                                         <?php 
                                             $age = $job['stats'][$k1];
                                             $days = floor($age / 86400);
@@ -85,7 +100,7 @@
                                                 echo $minutes > 0 ? $minutes.' minutes ' : '';
                                                 echo $seconds > 0 ? $seconds.' seconds ' : '';
                                             } else {
-                                                echo "-";
+                                                echo "0";
                                             }
                                         ?>
                                     </p>
@@ -94,7 +109,7 @@
                         </div>
 
                     </div>
-                    <div class="col-sm-12 mt-3">
+                    <div class="col-sm-12 mt-2">
                         <?php if ($job): ?>
                             <div class="row g-2">
                                 <div class="col-12">
@@ -104,7 +119,7 @@
                                     </small>
                                 </div>
                                 <div class="col-12">
-                                    <div class="card bg-black border-0">
+                                    <div class="card bg-black bg-opacity-25 border-0">
                                         <div class="card-body card-job-<?php echo $state ?>">
                                             <div class="row">
                                                 <div class="col-8 text-start d-inline">
@@ -130,7 +145,7 @@
                                                                     foreach ($tubes as $key => $name) {
                                                                         ?>
                                                                     <li>
-                                                                        <a class="dropdown-item" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&destTube=<?php echo $name; ?>&state=<?php echo $state; ?>"><?php echo htmlspecialchars($name); ?></a>
+                                                                        <a class="dropdown-item  fs-14px" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&destTube=<?php echo $name; ?>&state=<?php echo $state; ?>"><?php echo htmlspecialchars($name); ?></a>
                                                                     </li>
                                                                     <?php
                                                                 }
@@ -141,7 +156,7 @@
                                                             <?php
                                                             if ($state == 'ready') {
                                                                 ?>
-                                                                <li class="divider"></li>
+                                                                <li class="dropdown-divider"></li>
                                                                 <li>
                                                                     <a class="dropdown-item" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&destState=buried&state=<?php echo $state; ?>">Buried</a>
                                                                 </li>
@@ -187,7 +202,7 @@
                 <!-- <i>empty</i> -->
                 <div class="row">
                     <div class="col text-center">
-                        <img src="assets/empty.svg" class="img-fluid pt-5 mt-5 opacity-25" alt="Empty" width="240">
+                        <img src="assets/empty.svg" class="img-fluid pt-1 opacity-25" alt="Empty" width="200">
                         <h6 class="text-body-tertiary m-0">Empty</h6>
                     </div>
                 </div>

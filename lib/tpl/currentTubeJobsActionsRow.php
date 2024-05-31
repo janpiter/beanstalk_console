@@ -16,33 +16,33 @@ if (!@empty($_COOKIE['tubePauseSeconds'])) {
             
             <div class="row g-1">
                 <div class="col-md-2 col-12">
-                    <a class="btn btn-default btn-sm bg-black  w-100" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=kick&count=1"><i class="ri-speed-mini-fill"></i> Kick 1 job</a>
+                    <a class="btn btn-default btn-sm bg-black bg-opacity-50 w-100" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=kick&count=1"><i class="ri-speed-mini-fill"></i> Kick 1 job</a>
                 </div>
                 <div class="col-md-2 col-12">
 
                     <form method="GET">
                         <div class="input-group input-group-sm">
-                            <button type="submit" class="btn btn-default bg-black btn-sm col-7" id="button-addon1"><i class="ri-forward-end-mini-fill"></i> Kick more </button>
+                            <button type="submit" class="btn btn-default bg-black bg-opacity-50 btn-sm col-7" id="button-addon1"><i class="ri-forward-end-mini-fill"></i> Kick more </button>
                             <input type="hidden" name="server" value="<?php echo $server ?>">
                             <input type="hidden" name="tube" value="<?php echo urlencode($tube) ?>">
                             <input type="hidden" name="action" value="kick">
-                            <input id="kick_tube_no_<?php echo md5($tube);?>" type="number" value="10" name="count" min="0" step="1" size="4" class="form-control form-control-sm border border-black bg-black bg-opacity-25 kick_jobs_no col-5" aria-describedby="button-addon1">
+                            <input id="kick_tube_no_<?php echo md5($tube);?>" type="number" value="10" name="count" min="0" step="1" size="4" class="form-control form-control-sm border border-black bg-black bg-opacity-25 border-opacity-50 kick_jobs_no col-5" aria-describedby="button-addon1">
                         </div>
 
                     </form>
                 </div>
 
                 <div class="col-md-2 col-12">
-                    <a class="btn btn-default btn-sm bg-black w-100" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=kick&count=<?=$buriedJobsCount?>"><i class="ri-speed-mini-fill"></i> Kick all jobs</a>
+                    <a class="btn btn-default btn-sm bg-black bg-opacity-50 w-100" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=kick&count=<?=$buriedJobsCount?>"><i class="ri-speed-mini-fill"></i> Kick all jobs</a>
                 </div>
                 <div class="col-md-2 col-12 text-start">
                     <?php
                     if (empty($tubeStats['pause-time-left'])) {
-                        ?><a class="btn btn-default btn-sm bg-black w-100" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=pause&count=-1"
+                        ?><a class="btn btn-default btn-sm bg-black bg-opacity-50 w-100" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=pause&count=-1"
                            title="Temporarily prevent jobs being reserved from the given tube. Pause for: <?php echo $tubePauseSeconds; ?> seconds"><i class="ri-pause-mini-fill"></i>
                             Pause tube</a><?php
                     } else {
-                        ?><a class="btn btn-default btn-sm bg-black w-100" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=pause&count=0"
+                        ?><a class="btn btn-default btn-sm bg-black bg-opacity-50 w-100" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=pause&count=0"
                            title="<?php echo sprintf('Pause seconds left: %d', $tubeStats['pause-time-left']); ?>"><i class="ri-play-mini-fill"></i> Unpause tube</a><?php
                     }
                     ?>

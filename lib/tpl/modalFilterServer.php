@@ -14,11 +14,11 @@
                             foreach ($console->getServerStatsGroups() as $groupName => $fields): $i++;
                                 ?>
                                 <li class="nav-item  <?php if ($i == 1) echo 'active' ?>">
-                                    <button class="nav-link <?php if ($i == 1) echo 'active' ?>" id="<?php echo $groupName ?>-tab" data-bs-toggle="tab" data-bs-target="#<?php echo $groupName ?>" role="tab" type="button" aria-controls="<?php echo $groupName ?>"><?php echo ucfirst($groupName) ?></button>
+                                    <button class="nav-link text-body <?php if ($i == 1) echo 'active' ?>" id="<?php echo $groupName ?>-tab" data-bs-toggle="tab" data-bs-target="#<?php echo $groupName ?>" role="tab" type="button" aria-controls="<?php echo $groupName ?>"><?php echo ucfirst($groupName) ?></button>
                                 </li>
                             <?php endforeach ?>
                         </ul>
-                        <div class="tab-content">
+                        <div class="tab-content" style="min-height: 350px;max-height: 350px;overflow-y: scroll;">
                             <?php
                             $i = 0;
                             foreach ($console->getServerStatsGroups() as $groupName => $fields): $i++;
@@ -29,7 +29,7 @@
                                             <input type="checkbox" class="form-check-input" id="f-<?php echo $key ?>"name="<?php echo $key ?>" <?php if (in_array($key, $visible)) echo 'checked="checked"' ?>>
                                             <label class="form-check-label align-top ps-1" for="f-<?php echo $key ?>" style="max-width: 95%">
                                                 <p class="fw-bold mb-0"><?php echo ucfirst(str_replace('-', ' ', $key)) ?></p>
-                                                <p class="mb-2 text-secondary text-wrap"><small><?php echo ucfirst($description) ?></small></p>
+                                                <p class="mb-2 text-secondary text-wrap lh-sm"><small><small><?php echo ucfirst($description) ?></small></small></p>
                                             </label>
                                         </div>  
                                     <?php endforeach ?>
@@ -40,7 +40,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn" data-bs-dismiss="modal" aria-hidden="true">Close</button>
+                <button class="btn btn-sm btn-success" data-bs-dismiss="modal" aria-hidden="true">Close</button>
             </div>
         </div>
     </div>

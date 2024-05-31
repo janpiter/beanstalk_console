@@ -15,6 +15,7 @@
 }
 ::-webkit-scrollbar-track {
     background: transparent;
+    background: #212529;
     border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb {
@@ -47,6 +48,10 @@ body.no-nav {
     font-size: 13px!important;
 }
 
+.fs-14px {
+    font-size: 14px!important;
+}
+
 table *{
     font-size: 14px!important;
 }
@@ -56,6 +61,11 @@ pre {
 }
 pre code {
     font-size: 12px!important;
+}
+
+.form-check-input:checked {
+    background-color: rgb(25, 135, 84);
+    border: rgb(25, 135, 84);
 }
 
 .site-wrapper {
@@ -78,14 +88,8 @@ ol.inside, ul.inside {
     color: #449d44;
 }
 
-.navbar-nav > li > a {
-    padding-top:12px !important; padding-bottom:6px !important;
-}
-.navbar-default {min-height:40px !important}
-.navbar-brand{ padding: 10px 8px;font-size: 22px;line-height: 22px;font-weight: 200;height:40px; }
-
 #autoRefresh, #autoRefreshSummary {
-/*    margin-top: 2px;*/
+    margin-top: 4.5px;
 }
 
 .ellipsize {
@@ -121,14 +125,15 @@ ol.inside, ul.inside {
     color: darkred;
     color: #e685b5;
     font-weight: bolder;
-    background-color: #ffdddd;
+/*    background-color: #ffdddd;*/
 }
 
 /** Highlight delayed jobs */
 #summaryTable * td.td-current-jobs-delayed.hasValue, #servers-index * td.td-current-jobs-delayed.hasValue {
     color: #AD532D;
+    color: #d7be3a;
     font-weight: bolder;
-    background-color: #FFF3DD;
+/*    background-color: #FFF3DD;*/
 }
 
 /** Highlight paused tubes */

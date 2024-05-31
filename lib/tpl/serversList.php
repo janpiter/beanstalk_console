@@ -25,7 +25,7 @@ if (!empty($servers)):
             <div class="card bg-body border-0 shadow-sm">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped table-dark table-borderless align-middle mb-0" id="servers-index">
+                        <table class="table table-striped border-dark-subtle align-middle mb-0" id="servers-index">
                             <thead>
                                 <tr>
                                     <th>Name</th>
@@ -72,14 +72,14 @@ if (!empty($servers)):
                                             <td colspan="<?php echo count($visible) ?>" class="row-full">&nbsp;</td>
                                         <?php endif ?>
                                         <td class="text-center"><?php if (array_intersect(array($server), $cookieServers)): ?>
-                                                <a class="btn btn-sm btn-danger" title="Remove from list" href="./?action=serversRemove&removeServer=<?php echo htmlspecialchars($server) ?>"><i class="ri-subtract-line"></i></a>
+                                                <a class="btn btn-sm btn-danger" title="Remove from list" href="./?action=serversRemove&removeServer=<?php echo htmlspecialchars($server) ?>" style="padding: 2px 5px">Remove</a>
                                                 <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach ?>
                             </tbody>
                         </table>
-                        <a href="#servers-add" role="button" class="btn btn-info mt-2" id="addServer">Add server</a>
+                        <a href="#servers-add" role="button" class="btn btn-success btn-sm mt-3" id="addServer">Add server</a>
                     </div>
                 </div>
             </div>

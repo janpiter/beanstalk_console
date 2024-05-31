@@ -12,46 +12,46 @@
                             <strong>Error!</strong> Required fields are marked *
                         </div>
 
-                        <div class="form-group">
-                            <label class="control-label col" for="focusedInput">*Tube name</label>
+                        <div>
+                            <label class="form-label col" for="focusedInput">*Tube name</label>
 
                             <div class="col">
-                                <input class="form-control focused" id="tubeName" type="text" value="<?php echo $tube ?>">
+                                <input class="form-control form-control-sm focused" id="tubeName" type="text" value="<?php echo $tube ?>">
                             </div>
                         </div>
 
-                        <div class="form-group mt-3">
-                            <label class="control-label col" for="textarea">*Data</label>
+                        <div class="mt-3">
+                            <label class="form-label col" for="textarea">*Data</label>
 
                             <div class="col">
-                                <textarea id="tubeData" rows="3" class="form-control "></textarea>
+                                <textarea id="tubeData" rows="3" class="form-control form-control-sm"></textarea>
                             </div>
                         </div>
-                        <div class="form-group mt-3">
-                            <label class="control-label col" for="focusedInput">Priority</label>
+                        <div class="mt-3">
+                            <label class="form-label col" for="focusedInput">Priority</label>
 
                             <div class="col">
-                                <input class="form-control focused" id="tubePriority" type="text" value="">
+                                <input class="form-control form-control-sm focused" id="tubePriority" type="text" value="">
                             </div>
                         </div>
-                        <div class="form-group mt-3">
-                            <label class="control-label col" for="focusedInput">Delay</label>
+                        <div class="mt-3">
+                            <label class="form-label col" for="focusedInput">Delay</label>
 
                             <div class="col">
-                                <input class="form-control focused" id="tubeDelay" type="text" value="">
+                                <input class="form-control form-control-sm focused" id="tubeDelay" type="text" value="">
                             </div>
                         </div>
-                        <div class="form-group mt-3">
-                            <label class="control-label col" for="focusedInput">Ttr</label>
+                        <div class="mt-3">
+                            <label class="form-label col" for="focusedInput">Ttr</label>
 
                             <div class="col">
-                                <input class="form-control focused" id="tubeTtr" type="text" value="">
+                                <input class="form-control form-control-sm focused" id="tubeTtr" type="text" value="">
                             </div>
                         </div>
             </div>
             <div class="modal-footer">
-                <a href="#" class="btn" data-bs-dismiss="modal">Close</a>
-                <a href="#" class="btn btn-success" id="tubeSave">Save changes</a>
+                <a href="#" class="btn btn-sm" data-bs-dismiss="modal">Close</a>
+                <a href="#" class="btn btn-sm btn-success" id="tubeSave">Save changes</a>
             </div>
             </fieldset>
             </form>

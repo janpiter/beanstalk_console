@@ -478,3 +478,16 @@ $(document).ready(
 
         }
 );
+
+// Scroll To Top
+$(window).scroll(function() {
+   if($(window).scrollTop() > 100) {
+       $('.scroll-top').removeClass('d-none');
+   } else {
+       $('.scroll-top').addClass('d-none');
+   }
+});
+$('.scroll-top').click(function () {
+    window.scrollTo({top: 0, behavior: 'smooth'});
+});
+
