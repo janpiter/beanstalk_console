@@ -360,9 +360,11 @@ $(document).ready(
                     if (l.trim() != r.trim()) {
                         var $td1 = $(td1[i]), color = $td1.css('background-color');
                         $td1.css({
-                            'background-color': '#afa'
+                            'background-color': '#1d788a',
+                            'border-radius': '11px'
                         }).animate({
-                            'background-color': color
+                            'background-color': color,
+                            'border-radius': '0'
                         }, 500);
                         if (l.trim() != '0') {
                             $td1.addClass('hasValue');
