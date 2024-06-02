@@ -25,7 +25,7 @@ if ($server) {
         <link href="assets/vendor/json-viewer/jquery.json-viewer.css?_ver=<?php echo time(); ?>" rel="stylesheet">
         <link href="css/customer.css?_ver=<?php echo time(); ?>" rel="stylesheet">
         <link href="highlight/styles/magula.css" rel="stylesheet">
-        <link rel="shortcut icon" href="assets/favicon.ico">
+        <link rel="shortcut icon" href="assets/bs-rounded.png">
         <script>
             var url = "./?server=<?php echo $server ?>";
             var contentType = "<?php echo isset($contentType) ? $contentType : '' ?>";
@@ -50,7 +50,7 @@ if ($server) {
                 <nav class="navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3 shadow-sm" role="navigation">
                     <div class="container-fluid">
                         <a class="navbar-brand" href="./?">
-                            <img src="<?php echo "assets/favicon.ico"; ?>" alt="Beanstalk Console" width="18" height="22" class="pb-1">
+                            <img src="<?php echo "assets/bs-rounded.png"; ?>" alt="Beanstalk Console" width="22" height="22" class="rounded-circle mb-1">
                             <span>Beanstalk Console</span>
                         </a>
                         <button class="border-0 btn btn-sm navbar-toggler" style="padding-left: 5px;padding-right: 5px; " type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -169,15 +169,15 @@ if ($server) {
 
                                 <?php if ($server && !$tube) { ?>
                                     <li class="nav-item">
-                                        <button type="button" id="autoRefresh" class="btn btn-default btn-sm rounded-4 float-end" data-bs-toggle="tooltip" data-bs-title="Toggle auto refresh">
-                                            <i class="ri-refresh-line"></i>
+                                        <button type="button" id="autoRefresh" class="btn btn-default btn-sm rounded-4 float-end btn-circle p-0" data-bs-toggle="tooltip" data-bs-title="Toggle auto refresh">
+                                            <i class="ri-refresh-line icon"></i>
                                             <span class="visually-hidden">New alerts</span>
                                         </button>
                                     </li>
                                 <?php } else if (!$tube) { ?>
                                     <li class="nav-item">
-                                        <button type="button" id="autoRefreshSummary" class="btn btn-default btn-sm rounded-4 float-end" data-bs-toggle="tooltip" data-bs-title="Toggle auto refresh">
-                                            <i class="ri-refresh-line"></i>
+                                        <button type="button" id="autoRefreshSummary" class="btn btn-default btn-sm rounded-4 float-end btn-circle p-0" data-bs-toggle="tooltip" data-bs-title="Toggle auto refresh">
+                                            <i class="ri-refresh-line icon"></i>
                                             <span class="visually-hidden">New alerts</span>
                                         </button>
                                     </li>
@@ -240,7 +240,7 @@ if ($server) {
         </div>
 
         <div class="scroll-top position-fixed bottom-0 end-0 me-4 mb-3 pe-3 d-none" title="scroll to top">
-            <button type="button" class="btn btn-sm text-white btn-success rounded-circle"><i class="ri-arrow-up-s-line"></i></button>
+            <button type="button" class="btn btn-sm text-white btn-success rounded-circle p-0 btn-circle"><i class="ri-arrow-up-s-line icon"></i></button>
         </div>
 
         <script src='assets/vendor/jquery/jquery.js'></script>

@@ -62,6 +62,20 @@ pre code {
     font-size: 12px!important;
 }
 
+.btn-circle {
+    width: 31px!important;
+    height: 31px!important;
+}
+.btn-circle .icon {
+    line-height: 31px!important;
+    width: 31px!important;
+    height: 31px!important
+}
+
+.dropdown-item:active {
+    background-color: #367d55!important;
+}
+
 .form-check-input:checked {
     background-color: rgb(25, 135, 84);
     border: rgb(25, 135, 84);

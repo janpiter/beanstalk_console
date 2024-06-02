@@ -59,7 +59,7 @@
                             <label>
                                 <input type="checkbox" class="form-check-input" id="isDisabledJsonDecode" value="1"
                                        <?php if (@$_COOKIE['isDisabledJsonDecode'] != 1) { ?>checked="checked"<?php } ?>>
-                                <label class="form-check-label" for="isDisabledJsonDecode">
+                                <label class="form-check-label fw-normal" for="isDisabledJsonDecode">
                                     Before display: json_decode()
                                 </label>
                             </label>
@@ -69,7 +69,7 @@
                             <label>
                                 <input type="checkbox" class="form-check-input" id="isDisabledUnserialization" value="1"
                                        <?php if (@$_COOKIE['isDisabledUnserialization'] != 1) { ?>checked="checked"<?php } ?>>
-                                <label class="form-check-label" for="isDisabledUnserialization">
+                                <label class="form-check-label fw-normal" for="isDisabledUnserialization">
                                     Before display: unserialize()
                                 </label>
                             </label>
@@ -79,7 +79,7 @@
                             <label>
                                 <input type="checkbox" class="form-check-input" id="isEnabledBase64Decode" value="1"
                                        <?php if (@$_COOKIE['isEnabledBase64Decode'] == 1) { ?>checked="checked"<?php } ?>>
-                                <label class="form-check-label" for="isEnabledBase64Decode">
+                                <label class="form-check-label fw-normal" for="isEnabledBase64Decode">
                                     Before display: base64_decode()
                                 </label>
                             </label>
@@ -89,7 +89,7 @@
                             <label>
                                 <input type="checkbox" class="form-check-input" id="isDisabledJobDataHighlight" value="1"
                                        <?php if (@$_COOKIE['isDisabledJobDataHighlight'] != 1) { ?>checked="checked"<?php } ?>>
-                                <label class="form-check-label" for="isDisabledJobDataHighlight">
+                                <label class="form-check-label fw-normal" for="isDisabledJobDataHighlight">
                                     After display: enable highlight
                                 </label>
                             </label>

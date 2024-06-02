@@ -24,7 +24,7 @@ if (!empty($servers)):
         <div class="col-md-12 col-12 mt-4">
             <div class="card bg-body border-0 shadow-sm">
                 <div class="card-body">
-                    <div class="table-responsive mb-2">
+                    <div class="table-responsive">
                         <table class="table table-striped border-dark-subtle align-middle mb-0" id="servers-index">
                             <thead>
                                 <tr>
@@ -79,8 +79,10 @@ if (!empty($servers)):
                                 <?php endforeach ?>
                             </tbody>
                         </table>
-                        <a href="#servers-add" role="button" class="btn btn-success btn-sm mt-3 float-end" id="addServer">Add server</a>
                     </div>
+                </div>
+                <div class="card-body pt-1 text-end">
+                    <a href="#servers-add" role="button" class="btn btn-success btn-sm" id="addServer">Add server</a>
                 </div>
             </div>
         </div>
@@ -90,10 +92,10 @@ if (!empty($servers)):
         <div class="col-11 col-sm-6">
             <div class="card bg-body border-0 shadow-sm mt-5">
                 <div class="row g-0">
-                    <div class="col-md-4 bg-success rounded-start bg-opacity-25">
-                        <img src="assets/empty.svg" class="img-fluid rounded-start opacity-25 mt-sm-4 mt-0" alt="Empty">
+                    <div class="col-sm-4 col-12 d-none d-sm-block rounded-start" style="background-color: #118041">
+                        <img class="img-fluid rounded-start pt-4 mt-1" src="assets/bs-rounded.png" alt="Empty">
                     </div>
-                    <div class="col-md-8">
+                    <div class="col-sm-8 col-12">
                         <div class="card-body">
                             <p class="fs-1">Hello!</p>
                             <p class="card-text">This is Beanstalk console,<br/>web-interface for
