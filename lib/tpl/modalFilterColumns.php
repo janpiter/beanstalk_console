@@ -31,7 +31,7 @@
                                         <input type="checkbox" class="form-check-input" name="<?php echo $key ?>" <?php if (in_array($key, $visible)) echo 'checked="checked"' ?> id="check-<?php echo $key ?>">
                                         <label class="form-check-label align-top ps-1" for="check-<?php echo $key ?>" style="max-width: 95%">
                                             <p class="fw-bold mb-0"><?php echo ucfirst(str_replace('-', ' ', $key)) ?></p>
-                                            <p class="mb-2 text-secondary text-wrap"><small><?php echo ucfirst($description) ?></small></p>
+                                            <p class="mb-2 text-secondary text-wrap fw-normal"><small><?php echo ucfirst($description) ?></small></p>
                                         </label>
                                     </div>
                                 <?php endforeach ?>

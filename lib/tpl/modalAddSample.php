@@ -32,7 +32,7 @@
                             ?>
                             <div class="form-check">
                                 <input type="checkbox" class="form-check-input" autocomplete="off" name="tubes[<?php echo $t ?>]" id="move-<?php echo $t ?>" value="1" <?php echo $checked; ?>>
-                                <label class="form-check-label align-top ps-1" for="move-<?php echo $t ?>">
+                                <label class="form-check-label align-top ps-1 fw-normal" for="move-<?php echo $t ?>">
                                     <?php echo $t ?>
                                 </label>
                             </div>

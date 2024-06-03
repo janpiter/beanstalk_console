@@ -476,8 +476,9 @@ $(document).ready(
                 }
             }
 
-            function copyJob(state) {
-                $(`.btn-copy.${state}`).click(function() {
+            function copyJob() {
+                $(`.btn-copy-job`).click(function() {
+                    var state = $(this).data('state')
                     copyToClipboard(`json-viewer-${state}`, 'data-json')
                     $(`#json-viewer-${state}`).popover('show')
                     setTimeout(function() {
@@ -508,9 +509,7 @@ $(document).ready(
             jsonFormatter('delayed');
             jsonFormatter('buried');
 
-            copyJob('ready');
-            copyJob('delayed');
-            copyJob('buried');
+            copyJob();
 
             // fullScreen('ready');
             // fullScreen('delayed');

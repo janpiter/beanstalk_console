@@ -31,7 +31,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" id="opt-<?php echo $state; ?>">
                             <li>
-                                <a data-bs-toggle="tooltip" data-bs-title="Delete all <?php echo $state ?> jobs" class="dropdown-item fs-14px" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteAll&count=1" onclick="return confirm('This process might hang a while on tubes with lots of jobs. Are you sure you want to continue?');">
+                                <a class="dropdown-item fs-14px" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteAll&count=1" onclick="return confirm('This process might hang a while on tubes with lots of jobs. Are you sure you want to continue?');">
                                     Delete all <?php echo $state ?> jobs
                                </a>
                             </li>
@@ -143,7 +143,7 @@
                                                     <a class="btn btn-sm btn-dark addSample" data-jobid="<?php echo $job['id']; ?>" data-bs-toggle="tooltip" data-bs-title="Add to samples" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=addSample">
                                                        <i class="ri-add-line"></i>
                                                    </a>
-                                                   <button class="btn btn-copy <?php echo $state ?> btn-dark btn-sm" data-bs-toggle="tooltip" data-bs-title="Copy to clipboard">
+                                                   <button class="btn btn-copy-job btn-dark btn-sm" data-bs-toggle="tooltip" data-state="<?php echo $state ?>" data-bs-title="Copy to clipboard">
                                                         <i class="ri-file-copy-line"></i>
                                                     </button>
                                                 </div>
@@ -184,13 +184,14 @@
                                         </div>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="new-<?php echo $state ?>-tube" class="form-label">New tube</label>
+                                        <label for="new-<?php echo $state ?>-tube" class="form-label fw-bold">New tube</label>
                                         <input type="text" class="form-control form-control-sm" id="new-<?php echo $state ?>-tube" name="new-tube" data-state="<?php echo $state ?>" data-href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&action=moveJobsTo&state=<?php echo $state; ?>&destTube=" placeholder="New tube name">
                                     </div>
                                     <div>
-                                        <label class="form-label">Existing tube</label>
+                                        <label class="form-label fw-bold">Existing tube</label>
                                         <div class="row">
-                                            <div class="col-12" style="max-height: 250px;overflow-y: scroll;">
+                                            <div class="col-12">
+                                                <div style="max-height: 250px;overflow-y: scroll;">
                                                 <?php 
                                                 if (isset($tubes) && is_array($tubes) && count($tubes)) {
                                                     foreach ($tubes as $key => $name) { ?>
@@ -205,6 +206,7 @@
                                                         <label class="form-check-label fs-14px" for="tb-<?php echo $state ?>-buried">buried</label>
                                                     </div>
                                                 <?php } ?>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
