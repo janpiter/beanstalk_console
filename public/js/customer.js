@@ -261,7 +261,11 @@ $(document).ready(
                 // Execute the copy command
                 document.execCommand('copy');
                 document.body.removeChild(tempInput);
-                navigator.clipboard.writeText(dataUrl);
+                try {
+                    navigator.clipboard.writeText(dataUrl);
+                } catch(err) {
+                    console.log(err);
+                }
             }
 
             function addServer(host, port) {
