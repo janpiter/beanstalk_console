@@ -47,12 +47,13 @@ if ($server) {
         <div class="container-fluid">
 
             <?php if (!empty($servers)): ?>
-                <nav class="navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3 shadow-sm" role="navigation">
+                <nav class="navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3 shadow-sm rounded-bottom-0" role="navigation">
                     <div class="container-fluid">
                         <a class="navbar-brand" href="./?">
                             <img src="<?php echo "assets/bs-rounded.png"; ?>" alt="Beanstalk Console" width="22" height="22" class="rounded-circle mb-1">
                             <span>Beanstalk Console</span>
                         </a>
+
                         <button class="border-0 btn btn-sm navbar-toggler" style="padding-left: 5px;padding-right: 5px; " type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                             <i class="ri-menu-line"></i>
                         </button>
@@ -215,6 +216,12 @@ if ($server) {
                             ?>
                         <?php elseif (!$tube):
                             ?>
+                            <div class="col-12 px-3 pb-3 bg-body rounded-3 rounded-top-0">
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-control-sm input-sm search-query border-end-0 shadow-none" id="searchTubes" name="searchTubes" placeholder="Search tubes" aria-describedby="button-addon2">
+                                    <button type="button" class="btn clear-search border-start-0" id="clearInput" aria-label="Clear" style="display: block;border-color: rgb(73, 80, 87)!important;">×</button>
+                                </div>
+                            </div>
                             <div id="idAllTubes">
                                 <?php require_once dirname(__FILE__) . '/allTubes.php'; ?>
                                 <?php require_once dirname(__FILE__) . '/modalClearTubes.php'; ?>
