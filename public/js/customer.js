@@ -210,7 +210,7 @@ $(document).ready(
 
                 if ($('#searchTubes').is(':visible')) { // Check if the element is visible
                     window.addEventListener("keydown",function (e) {
-                        if (!e.ctrlKey && !e.altKey && !e.shiftKey && e.key.length === 1 && /^[a-zA-Z0-9]$/.test(e.key)) {
+                        if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.key.length === 1 && /^[a-zA-Z0-9]$/.test(e.key)) {
                             // Check if a single alphanumeric key was pressed
                             if (!$('#searchTubes').is(":focus") && !$('body').hasClass('modal-open')) {
                                 e.preventDefault();
@@ -251,10 +251,29 @@ $(document).ready(
                 toggleClearButton();
 
 
-                $('#searchTubes').on('keyup', function() {
-                    var value = $(this).val().toLowerCase();
-                    $('table tbody tr').filter(function() {
-                        $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                $('#searchTubes').on('input keyup', function() {
+                    var pattern = $.trim($(this).val());
+                    var matcher = null;
+
+                    if (pattern) {
+                        // Support regular expressions and the familiar * wildcard.
+                        // If other regex operators are present, preserve standard regex semantics.
+                        var hasRegexSyntax = /[.|+?^${}()[\]\\]/.test(pattern);
+                        var regexPattern = hasRegexSyntax ? pattern : pattern.replace(/\*/g, '.*');
+                        try {
+                            matcher = new RegExp(regexPattern, 'i');
+                        } catch (e) {
+                            // Treat malformed expressions as literal text, retaining * wildcards.
+                            regexPattern = pattern
+                                .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                                .replace(/\\\*/g, '.*');
+                            matcher = new RegExp(regexPattern, 'i');
+                        }
+                    }
+
+                    $('#idAllTubes tbody tr').each(function() {
+                        var tubeName = $(this).find('td:first').text().trim();
+                        $(this).toggle(!matcher || matcher.test(tubeName));
                     });
                 });
                 
