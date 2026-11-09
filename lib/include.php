@@ -188,6 +188,9 @@ class Console {
                 'current-jobs-ready',
                 'current-jobs-reserved',
                 'current-jobs-urgent',
+                'current-using',
+                'current-waiting',
+                'current-watching',
                 'total-jobs',
             );
         }

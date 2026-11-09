@@ -38,7 +38,7 @@ if ($server) {
         <![endif]-->
     </head>
 
-    <?php if (!empty($servers)): ?>
+    <?php if (!empty($servers) || !empty($server)): ?>
         <body class="no-nav bg-body-tertiary mt-3" data-bs-theme="dark">
         <?php else: ?>
         <body class="bg-body-tertiary" data-bs-theme="dark">
@@ -46,7 +46,7 @@ if ($server) {
 
         <div class="container-fluid">
 
-            <?php if (!empty($servers)): ?>
+            <?php if (!empty($servers) || !empty($server)): ?>
                 <nav class="navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3 shadow-sm rounded-bottom-0" role="navigation">
                     <div class="container-fluid">
                         <a class="navbar-brand" href="./?">

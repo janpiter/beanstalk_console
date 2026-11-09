@@ -9,6 +9,12 @@ $(document).ready(
 
             __init();
 
+            function setAutoRefreshUrl(enabled) {
+                var currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('auto_refresh', enabled ? 'true' : 'false');
+                window.history.replaceState(null, '', currentUrl);
+            }
+
             function __init() {
                 $('#servers-add .btn-add-server').click(function () {
                     addServer($('#host').val(), $('#port').val());
@@ -74,10 +80,12 @@ $(document).ready(
                             'containerClassCopy': '#idAllTubesCopy',
                         });
                         $('#autoRefresh').toggleClass('btn-success');
+                        setAutoRefreshUrl(true);
                     } else {
                         clearTimeout(timer);
                         doAutoRefresh = false;
                         $('#autoRefresh').toggleClass('btn-success');
+                        setAutoRefreshUrl(false);
                     }
                     return false;
                 });
@@ -93,10 +101,12 @@ $(document).ready(
                             'containerClassCopy': '#idServersCopy',
                         });
                         $('#autoRefreshSummary').toggleClass('btn-success');
+                        setAutoRefreshUrl(true);
                     } else {
                         clearTimeout(timer);
                         doAutoRefresh = false;
                         $('#autoRefreshSummary').toggleClass('btn-success');
+                        setAutoRefreshUrl(false);
                     }
                     return false;
                 });
@@ -223,6 +233,10 @@ $(document).ready(
 
                 var $searchTubesInput = $('#searchTubes');
                 var $clearSearchBtn = $searchTubesInput.siblings('.clear-search'); // Use siblings() relative to input
+                var tubeFilterParam = new URLSearchParams(window.location.search).get('filter');
+                if (tubeFilterParam !== null) {
+                    $searchTubesInput.val(tubeFilterParam);
+                }
 
                 // Function to toggle clear button visibility
                 function toggleClearButton() {
@@ -254,6 +268,14 @@ $(document).ready(
                 $('#searchTubes').on('input keyup', function() {
                     var pattern = $.trim($(this).val());
                     var matcher = null;
+                    var currentUrl = new URL(window.location.href);
+
+                    if (pattern) {
+                        currentUrl.searchParams.set('filter', $(this).val());
+                    } else {
+                        currentUrl.searchParams.delete('filter');
+                    }
+                    window.history.replaceState(null, '', currentUrl);
 
                     if (pattern) {
                         // Support regular expressions and the familiar * wildcard.
@@ -289,6 +311,10 @@ $(document).ready(
                         : totalCount + ' total tubes';
                     $('#tubeCountInfo').text(countInfo);
                 });
+
+                if (tubeFilterParam !== null) {
+                    $searchTubesInput.trigger('input');
+                }
                 
                 $(document)
                 .on('shown.bs.modal', '[id^=modal-move-job]', function(e) {
@@ -317,7 +343,12 @@ $(document).ready(
                     });
                 }
 
-                if ($.cookie('isEnabledAutoRefreshLoad')) {
+                var autoRefreshParam = new URLSearchParams(window.location.search).get('auto_refresh');
+                var shouldAutoRefresh = autoRefreshParam === null
+                    ? Boolean($.cookie('isEnabledAutoRefreshLoad'))
+                    : autoRefreshParam.toLowerCase() === 'true';
+
+                if (shouldAutoRefresh) {
                     if ($('#autoRefresh').length) {
                         $('#autoRefresh').click();
                     }
