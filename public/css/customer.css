@@ -369,6 +369,37 @@ body.has-tube-bulk-actions #summaryTable {
     outline: none;
     box-shadow: none;
     padding-right: 2rem;
+    border-radius: var(--bs-border-radius) !important;
+}
+
+.tube-filter-bar .input-group {
+    position: relative;
+}
+
+.tube-filter-bar .clear-search {
+    position: absolute;
+    z-index: 5;
+    top: 50%;
+    right: 0.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    transform: translateY(-50%);
+    border: 0 !important;
+    border-radius: 0.25rem !important;
+    background: transparent !important;
+    color: var(--bs-secondary-color);
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.tube-filter-bar .clear-search:hover,
+.tube-filter-bar .clear-search:focus-visible {
+    color: var(--bs-body-color);
+    background: var(--bs-tertiary-bg) !important;
 }
 
 .tube-filter-bar {

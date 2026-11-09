@@ -218,8 +218,8 @@ if ($server) {
                             ?>
                             <div class="col-12 px-3 pb-3 bg-body rounded-3 rounded-top-0 tube-filter-bar">
                                 <div class="input-group">
-                                    <input type="text" class="form-control form-control-sm input-sm search-query border-end-0 shadow-none" id="searchTubes" name="searchTubes" placeholder="Search tubes" aria-describedby="button-addon2">
-                                    <button type="button" class="btn clear-search border-start-0" id="clearInput" aria-label="Clear" style="display: block;border-color: rgb(73, 80, 87)!important;">×</button>
+                                    <input type="text" class="form-control form-control-sm input-sm search-query shadow-none" id="searchTubes" name="searchTubes" placeholder="Search tubes" aria-describedby="button-addon2">
+                                    <button type="button" class="btn clear-search d-none" id="clearInput" aria-label="Clear filter">×</button>
                                 </div>
                                 <div id="tubeCountInfo" class="form-text text-body-secondary mt-2" aria-live="polite"><?php echo isset($tubes) && is_array($tubes) ? count($tubes) : 0; ?> total tubes</div>
                             </div>

@@ -394,12 +394,9 @@ $(document).ready(
 
                 // Function to toggle clear button visibility
                 function toggleClearButton() {
-                    var value = $searchTubesInput.val();
-                    if (value && value.length > 0) {
-                        // $clearSearchBtn.show();
-                    } else {
-                        // $clearSearchBtn.hide();
-                    }
+                    var value = $.trim($searchTubesInput.val() || '');
+                    var hasFilter = value.length > 0;
+                    $clearSearchBtn.toggleClass('d-none', !hasFilter);
                 }
 
                 // Show/hide button on input/keyup
@@ -410,9 +407,7 @@ $(document).ready(
                 // Clear input and hide button on click
                 $clearSearchBtn.on('click', function() {
                     $searchTubesInput.val('').focus(); // Clear input and refocus
-                    // $(this).hide(); // Hide the button itself
-                    // Optionally trigger 'input' event if other scripts depend on it
-                    $('#searchTubes').trigger('keyup');
+                    $searchTubesInput.trigger('input');
                 });
 
                 $('#idAllTubes').on('change', '.tube-row-select', function() {
