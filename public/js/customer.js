@@ -271,10 +271,23 @@ $(document).ready(
                         }
                     }
 
-                    $('#idAllTubes tbody tr').each(function() {
+                    var $tubeRows = $('#idAllTubes tbody tr');
+                    var matchedCount = 0;
+
+                    $tubeRows.each(function() {
                         var tubeName = $(this).find('td:first').text().trim();
-                        $(this).toggle(!matcher || matcher.test(tubeName));
+                        var matches = !matcher || matcher.test(tubeName);
+                        $(this).toggle(matches);
+                        if (matches) {
+                            matchedCount++;
+                        }
                     });
+
+                    var totalCount = $tubeRows.length;
+                    var countInfo = pattern
+                        ? matchedCount + ' of ' + totalCount + ' tubes match · ' + totalCount + ' total tubes'
+                        : totalCount + ' total tubes';
+                    $('#tubeCountInfo').text(countInfo);
                 });
                 
                 $(document)

@@ -221,6 +221,7 @@ if ($server) {
                                     <input type="text" class="form-control form-control-sm input-sm search-query border-end-0 shadow-none" id="searchTubes" name="searchTubes" placeholder="Search tubes" aria-describedby="button-addon2">
                                     <button type="button" class="btn clear-search border-start-0" id="clearInput" aria-label="Clear" style="display: block;border-color: rgb(73, 80, 87)!important;">×</button>
                                 </div>
+                                <div id="tubeCountInfo" class="form-text text-body-secondary mt-2" aria-live="polite"><?php echo count(is_array($tubes) ? $tubes : array()); ?> total tubes</div>
                             </div>
                             <div id="idAllTubes">
                                 <?php require_once dirname(__FILE__) . '/allTubes.php'; ?>

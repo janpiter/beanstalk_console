@@ -266,12 +266,6 @@ class Console {
     }
 
     protected function deleteAllFromTube($state, $tube) {
-        // Deleting a large tube can take a long time. Release PHP's session lock
-        // so other requests from this browser session can continue meanwhile.
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-
         try {
             do {
                 switch ($state) {

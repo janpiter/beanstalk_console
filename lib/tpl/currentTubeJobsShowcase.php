@@ -31,7 +31,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" id="opt-<?php echo $state; ?>">
                             <li>
-                                <a class="dropdown-item fs-14px" target="_blank" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteAll&count=1" onclick="return confirm('This will run in a new tab and may take a while on tubes with lots of jobs. Are you sure you want to continue?');">
+                                <a class="dropdown-item fs-14px" href="./?server=<?php echo $server ?>&tube=<?php echo urlencode($tube) ?>&state=<?php echo $state ?>&action=deleteAll&count=1" onclick="return confirm('This process might hang a while on tubes with lots of jobs. Are you sure you want to continue?');">
                                     Delete all <?php echo $state ?> jobs
                                </a>
                             </li>
