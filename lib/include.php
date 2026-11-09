@@ -498,6 +498,61 @@ class Console {
         exit();
     }
 
+    protected function _actionTubeBulk() {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $operation = isset($_POST['operation']) ? $_POST['operation'] : '';
+        $requestedTubes = isset($_POST['tubes']) && is_array($_POST['tubes']) ? $_POST['tubes'] : array();
+        $requestedTubes = array_values(array_unique(array_filter($requestedTubes, 'is_string')));
+        $kickMode = isset($_POST['kick_mode']) ? $_POST['kick_mode'] : '';
+        $kickCount = isset($_POST['count']) ? intval($_POST['count']) : 0;
+        $invalidKick = $operation === 'kick' && (!in_array($kickMode, array('all', 'limit'), true) || ($kickMode === 'limit' && $kickCount < 1));
+        if (!in_array($operation, array('pause', 'resume', 'kick'), true) || empty($requestedTubes) || $invalidKick) {
+            http_response_code(400);
+            echo json_encode(array('error' => 'Choose at least one tube and a valid action.'));
+            exit();
+        }
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $availableTubes = array_flip($this->_tplVars['tubes']);
+        $delay = 0;
+        if ($operation === 'pause') {
+            $delay = !empty($_COOKIE['tubePauseSeconds']) ? intval($_COOKIE['tubePauseSeconds']) : 3600;
+            if ($delay <= 0) {
+                $delay = 3600;
+            }
+        }
+
+        $results = array();
+        foreach ($requestedTubes as $tube) {
+            if (!isset($availableTubes[$tube])) {
+                $results[] = array('tube' => $tube, 'success' => false, 'message' => 'Tube not found on this server.');
+                continue;
+            }
+
+            try {
+                if ($operation === 'kick') {
+                    $limit = $kickMode === 'all'
+                        ? intval($this->_tplVars['tubesStats'][$tube]['current-jobs-buried']['value'] ?? 0)
+                        : $kickCount;
+                    $kicked = $limit > 0 ? $this->interface->kick($tube, $limit) : 0;
+                    $results[] = array('tube' => $tube, 'success' => true, 'kicked' => $kicked);
+                } else {
+                    $this->interface->pauseTube($tube, $delay);
+                    $results[] = array('tube' => $tube, 'success' => true);
+                }
+            } catch (Exception $e) {
+                $results[] = array('tube' => $tube, 'success' => false, 'message' => $e->getMessage());
+            }
+        }
+
+        echo json_encode(array('results' => $results));
+        exit();
+    }
+
     protected function _actionAddSample() {
         $success = false;
         $error = '';

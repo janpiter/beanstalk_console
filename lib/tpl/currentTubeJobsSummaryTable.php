@@ -6,8 +6,8 @@ $visible = $console->getTubeStatVisible();
     <div class="row">
         <div class="col-md-12 col-12 mt-4">
             <div class="card bg-body border-0 shadow-sm  rounded-top-2 rounded-bottom-0">
-                <div class="card-body">
-                    <div class="table-responsive mb-2">
+                <div class="card-body pb-0">
+                    <div class="table-responsive mb-0">
                         <table class="table table-striped border-dark-subtle align-middle mb-0">
                             <thead>
                                 <tr>

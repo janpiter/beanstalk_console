@@ -93,8 +93,20 @@ class BeanstalkInterface {
 
     public function getTubesStats() {
         $stats = array();
-        foreach ($this->getTubes() as $tube) {
-            $stats[$tube] = $this->getTubeStats($tube);
+        $tubes = $this->getTubes();
+        if (!is_array($tubes)) {
+            return $stats;
+        }
+
+        foreach ($tubes as $tube) {
+            try {
+                $stats[$tube] = $this->getTubeStats($tube);
+            } catch (Pheanstalk_Exception_ServerException $ex) {
+                // A tube can disappear after listTubes() but before statsTube().
+                if (strpos($ex->getMessage(), Pheanstalk_Response::RESPONSE_NOT_FOUND) === false) {
+                    throw $ex;
+                }
+            }
         }
         return $stats;
     }
@@ -163,7 +175,7 @@ class BeanstalkInterface {
     }
 
     public function kick($tube, $limit) {
-        $this->_client->useTube($tube)->kick($limit);
+        return $this->_client->useTube($tube)->kick($limit);
     }
 
     public function deleteReady($tube) {

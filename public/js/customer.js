@@ -2,6 +2,10 @@ $(document).ready(
         function () {
 
             var timer;
+            var tubeBulkStatusTimer;
+            var pendingTubeBulkAction = null;
+            var tubeBulkActionPending = false;
+            var kickMoreInputValue = '10';
             var doAutoRefresh = false;
 
             const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
@@ -15,7 +19,155 @@ $(document).ready(
                 window.history.replaceState(null, '', currentUrl);
             }
 
+            function updateTubeFilterStickyOffset() {
+                var $navbar = $('nav.navbar.sticky-top:visible').first();
+                var navbarHeight = $navbar.length ? Math.ceil($navbar.outerHeight()) : 0;
+                document.documentElement.style.setProperty('--tube-filter-sticky-top', navbarHeight + 'px');
+            }
+
+            function showTubeBulkAlert(message, variant, duration) {
+                var $container = $('#tubeBulkActionAlert');
+                if (!$container.length) {
+                    return;
+                }
+
+                clearTimeout(tubeBulkStatusTimer);
+                var $alert = $('<div>', {
+                    class: 'alert alert-' + variant + ' alert-dismissible fade show shadow-lg mb-0',
+                    role: 'alert'
+                });
+                if (variant === 'info' && message.slice(-1) === '…') {
+                    $('<span>', {
+                        class: 'spinner-border spinner-border-sm me-2',
+                        'aria-hidden': 'true'
+                    }).appendTo($alert);
+                }
+                $('<span>').text(message).appendTo($alert);
+                $('<button>', {
+                    type: 'button',
+                    class: 'btn-close',
+                    'aria-label': 'Dismiss notification'
+                }).on('click', function() {
+                    clearTimeout(tubeBulkStatusTimer);
+                    $container.addClass('d-none').empty();
+                }).appendTo($alert);
+                $container.empty().removeClass('d-none').append($alert);
+
+                if (duration > 0) {
+                    tubeBulkStatusTimer = setTimeout(function() {
+                        $container.addClass('d-none').empty();
+                    }, duration);
+                }
+            }
+
+            function updateTubeSelectionUi() {
+                var $rows = $('#idAllTubes tbody tr');
+                var $selected = $rows.find('.tube-row-select:checked');
+                var visibleCount = $rows.filter(':visible').length;
+                var selectedVisibleCount = $rows.filter(':visible').find('.tube-row-select:checked').length;
+                var hiddenSelectedCount = $selected.length - selectedVisibleCount;
+                var $bulkActions = $('#tubeBulkActions');
+
+                $('#tubeSelectionSummary').text(
+                    $selected.length + ' tube' + ($selected.length === 1 ? '' : 's') + ' selected' +
+                    (hiddenSelectedCount > 0 ? ' (' + hiddenSelectedCount + ' hidden by filter)' : '')
+                );
+                var showBar = $selected.length > 0;
+                $bulkActions.toggleClass('d-none', !showBar);
+                $('body').toggleClass('has-tube-bulk-actions', showBar);
+                $('#kickOneSelectedTubes, #kickMoreSelectedTubes, #kickAllSelectedTubes, #pauseSelectedTubes, #resumeSelectedTubes')
+                    .prop('disabled', tubeBulkActionPending || $selected.length === 0);
+                $('#selectVisibleTubes, .tube-row-select, #kickSelectedCount')
+                    .prop('disabled', tubeBulkActionPending);
+
+                if (showBar) {
+                    window.requestAnimationFrame(function() {
+                        document.documentElement.style.setProperty('--tube-bulk-space', ($bulkActions.outerHeight() + 16) + 'px');
+                    });
+                } else {
+                    document.documentElement.style.removeProperty('--tube-bulk-space');
+                }
+
+                var $selectVisible = $('#selectVisibleTubes');
+                $selectVisible.prop('checked', visibleCount > 0 && selectedVisibleCount === visibleCount);
+                $selectVisible.prop('indeterminate', selectedVisibleCount > 0 && selectedVisibleCount < visibleCount);
+            }
+
+            function applyTubeBulkResults(results, operation) {
+                var succeeded = 0;
+                var kicked = 0;
+                var failures = [];
+
+                results.forEach(function(result) {
+                    if (!result.success) {
+                        failures.push(result.tube + ': ' + (result.message || 'Request failed'));
+                        return;
+                    }
+
+                    succeeded++;
+                    kicked += parseInt(result.kicked, 10) || 0;
+                    var $row = $('#idAllTubes tbody tr').filter(function() {
+                        return $(this).find('.tube-row-select').val() === result.tube;
+                    });
+                    var $pauseTime = $row.find('.td-pause-time-left');
+
+                    if (operation === 'kick') {
+                        return;
+                    } else if (operation === 'pause') {
+                        var seconds = parseInt($.cookie('tubePauseSeconds'), 10) || 3600;
+                        $row.addClass('tr-tube-paused').attr('title', 'Pause seconds left: ' + seconds);
+                        if (!$row.find('.tube-paused-indicator').length) {
+                            $('<span>', {
+                                class: 'tube-paused-indicator',
+                                role: 'img',
+                                'aria-label': 'Paused, ' + seconds + ' seconds remaining',
+                                title: 'Paused · ' + seconds + ' seconds remaining'
+                            }).append($('<i>', { class: 'ri-pause-mini-fill', 'aria-hidden': 'true' }))
+                              .appendTo($row.find('.tube-name-content'));
+                        } else {
+                            $row.find('.tube-paused-indicator')
+                                .attr('title', 'Paused · ' + seconds + ' seconds remaining')
+                                .attr('aria-label', 'Paused, ' + seconds + ' seconds remaining');
+                        }
+                        $pauseTime.text(seconds).addClass('hasValue');
+                    } else {
+                        $row.removeClass('tr-tube-paused').removeAttr('title');
+                        $row.find('.tube-paused-indicator').remove();
+                        $pauseTime.text('0').removeClass('hasValue');
+                    }
+                });
+
+                var message;
+                if (operation === 'kick') {
+                    message = kicked === 0
+                        ? 'No buried jobs to kick in ' + succeeded + ' selected tube' + (succeeded === 1 ? '' : 's') + '.'
+                        : 'Kicked ' + kicked + ' buried job' + (kicked === 1 ? '' : 's') + ' across ' + succeeded + ' tube' + (succeeded === 1 ? '' : 's') + '.';
+                } else {
+                    message = (operation === 'pause' ? 'Paused ' : 'Resumed ') + succeeded + ' of ' + results.length + ' selected tubes.';
+                }
+                if (failures.length) {
+                    message += ' Failed: ' + failures.join('; ');
+                }
+                showTubeBulkAlert(message, failures.length ? 'warning' : (operation === 'kick' && kicked === 0 ? 'info' : 'success'), 7000);
+
+                if (failures.length) {
+                    results.filter(function(result) { return result.success; }).forEach(function(result) {
+                        $('#idAllTubes .tube-row-select').filter(function() {
+                            return $(this).val() === result.tube;
+                        }).prop('checked', false);
+                    });
+                } else {
+                    $('#idAllTubes .tube-row-select, #selectVisibleTubes').prop('checked', false);
+                }
+                $('#selectVisibleTubes').prop('indeterminate', false);
+                updateTubeSelectionUi();
+            }
+
             function __init() {
+                updateTubeFilterStickyOffset();
+                $(window).on('resize', updateTubeFilterStickyOffset);
+                $('#navbarSupportedContent').on('shown.bs.collapse hidden.bs.collapse', updateTubeFilterStickyOffset);
+
                 $('#servers-add .btn-add-server').click(function () {
                     addServer($('#host').val(), $('#port').val());
                     $("#host,#port").val('');
@@ -220,7 +372,9 @@ $(document).ready(
 
                 if ($('#searchTubes').is(':visible')) { // Check if the element is visible
                     window.addEventListener("keydown",function (e) {
-                        if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.key.length === 1 && /^[a-zA-Z0-9]$/.test(e.key)) {
+                        var target = e.target;
+                        var targetIsControl = target && target.closest && target.closest('input, textarea, select, button, [contenteditable="true"], [role="textbox"]');
+                        if (!targetIsControl && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.key.length === 1 && /^[a-zA-Z0-9]$/.test(e.key)) {
                             // Check if a single alphanumeric key was pressed
                             if (!$('#searchTubes').is(":focus") && !$('body').hasClass('modal-open')) {
                                 e.preventDefault();
@@ -261,6 +415,174 @@ $(document).ready(
                     $('#searchTubes').trigger('keyup');
                 });
 
+                $('#idAllTubes').on('change', '.tube-row-select', function() {
+                    updateTubeSelectionUi();
+                });
+
+                $('#idAllTubes').on('change', '#selectVisibleTubes', function() {
+                    var checked = $(this).is(':checked');
+                    $('#idAllTubes tbody tr:visible .tube-row-select').prop('checked', checked);
+                    updateTubeSelectionUi();
+                });
+
+                function submitTubeBulkAction(operation, kickMode, count) {
+                    if (tubeBulkActionPending) {
+                        return;
+                    }
+                    var selectedTubes = $('#idAllTubes .tube-row-select:checked').map(function() {
+                        return $(this).val();
+                    }).get();
+                    if (!selectedTubes.length) {
+                        return;
+                    }
+
+                    var actionLabel;
+                    var actionTitle;
+                    var confirmLabel;
+                    var confirmClass;
+                    if (operation === 'kick') {
+                        actionTitle = 'Kick buried jobs';
+                        actionLabel = kickMode === 'all'
+                            ? 'Kick all buried jobs from ' + selectedTubes.length + ' selected tubes?'
+                            : 'Kick up to ' + count + ' buried job' + (count === 1 ? '' : 's') + ' from each of ' + selectedTubes.length + ' selected tubes?';
+                        confirmLabel = 'Kick jobs';
+                        confirmClass = 'btn-warning';
+                    } else {
+                        actionTitle = operation === 'pause' ? 'Pause tubes' : 'Resume tubes';
+                        actionLabel = (operation === 'pause' ? 'Pause job reservations on ' : 'Resume job reservations on ') + selectedTubes.length + ' selected tubes?';
+                        confirmLabel = operation === 'pause' ? 'Pause tubes' : 'Resume tubes';
+                        confirmClass = operation === 'pause' ? 'btn-primary' : 'btn-success';
+                    }
+
+                    var detailLabel;
+                    if (operation === 'kick') {
+                        detailLabel = 'Buried jobs will return to the ready queue.';
+                    } else if (operation === 'pause') {
+                        detailLabel = 'Pause duration: ' + (parseInt($.cookie('tubePauseSeconds'), 10) || 3600) + ' seconds.';
+                    } else {
+                        detailLabel = 'The current pause will be cleared.';
+                    }
+                    pendingTubeBulkAction = {
+                        operation: operation,
+                        kickMode: kickMode,
+                        count: count,
+                        tubes: selectedTubes
+                    };
+                    $('#tubeBulkConfirmTitle').text(actionTitle);
+                    $('#tubeBulkConfirmMessage').text(actionLabel);
+                    $('#tubeBulkConfirmDetail').text(detailLabel);
+                    var $tubeList = $('#tubeBulkConfirmTubes').empty();
+                    selectedTubes.forEach(function(tubeName) {
+                        $('<li>', { class: 'tube-bulk-confirm-tube' }).text(tubeName).appendTo($tubeList);
+                    });
+                    $('#confirmTubeBulkAction')
+                        .removeClass('btn-primary btn-success btn-warning btn-danger')
+                        .addClass(confirmClass)
+                        .text(confirmLabel);
+                    $('#tubeBulkConfirmModal').modal('show');
+                }
+
+                function executeTubeBulkAction(action) {
+                    if (tubeBulkActionPending) {
+                        return;
+                    }
+                    tubeBulkActionPending = true;
+                    var operation = action.operation;
+                    var kickMode = action.kickMode;
+                    var count = action.count;
+                    var selectedTubes = action.tubes;
+
+                    var requestUrl = new URL(window.location.href);
+                    requestUrl.searchParams.set('action', 'tubeBulk');
+                    requestUrl.searchParams.delete('tube');
+                    requestUrl.searchParams.delete('state');
+                    requestUrl.searchParams.delete('filter');
+                    requestUrl.searchParams.delete('auto_refresh');
+
+                    updateTubeSelectionUi();
+                    showTubeBulkAlert(operation === 'kick'
+                        ? 'Kicking buried jobs from ' + selectedTubes.length + ' tubes…'
+                        : (operation === 'pause' ? 'Pausing ' : 'Resuming ') + selectedTubes.length + ' tubes…', 'info', 0);
+
+                    var postData = { operation: operation, tubes: selectedTubes };
+                    if (operation === 'kick') {
+                        postData.kick_mode = kickMode;
+                        postData.count = count || 0;
+                    }
+
+                    $.ajax({
+                        url: requestUrl.toString(),
+                        type: 'POST',
+                        dataType: 'json',
+                        data: postData,
+                        success: function(response) {
+                            if (response && Array.isArray(response.results)) {
+                                applyTubeBulkResults(response.results, operation);
+                            } else {
+                                showTubeBulkAlert('The server returned an unexpected response.', 'danger', 7000);
+                            }
+                        },
+                        error: function(xhr) {
+                            var message = xhr.responseJSON && xhr.responseJSON.error
+                                ? xhr.responseJSON.error
+                                : 'Could not update the selected tubes. Please try again.';
+                            showTubeBulkAlert(message, 'danger', 7000);
+                        },
+                        complete: function() {
+                            tubeBulkActionPending = false;
+                            updateTubeSelectionUi();
+                        }
+                    });
+                }
+
+                $('#confirmTubeBulkAction').on('click', function() {
+                    if (!pendingTubeBulkAction || tubeBulkActionPending) {
+                        return;
+                    }
+                    var action = pendingTubeBulkAction;
+                    pendingTubeBulkAction = null;
+                    $('#tubeBulkConfirmModal').modal('hide');
+                    executeTubeBulkAction(action);
+                });
+                $('#tubeBulkConfirmModal').on('hidden.bs.modal', function() {
+                    pendingTubeBulkAction = null;
+                });
+
+                $(document).on('click', '#kickOneSelectedTubes', function() {
+                    submitTubeBulkAction('kick', 'limit', 1);
+                });
+                $(document).on('click', '#kickMoreSelectedTubes', function() {
+                    var count = parseInt($('#kickSelectedCount').val(), 10);
+                    if (!Number.isInteger(count) || count < 1) {
+                        showTubeBulkAlert('Enter a kick count of at least 1.', 'warning', 5000);
+                        return;
+                    }
+                    submitTubeBulkAction('kick', 'limit', count);
+                });
+                if ($('#kickSelectedCount').length) {
+                    kickMoreInputValue = $('#kickSelectedCount').val();
+                }
+                $(document).on('input change', '#kickSelectedCount', function() {
+                    kickMoreInputValue = $(this).val();
+                });
+                $(document).on('keydown', '#kickSelectedCount', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        $('#kickMoreSelectedTubes').trigger('click');
+                    }
+                });
+                $(document).on('click', '#kickAllSelectedTubes', function() {
+                    submitTubeBulkAction('kick', 'all', 0);
+                });
+                $(document).on('click', '#pauseSelectedTubes', function() {
+                    submitTubeBulkAction('pause');
+                });
+                $(document).on('click', '#resumeSelectedTubes', function() {
+                    submitTubeBulkAction('resume');
+                });
+
+                $(window).on('resize', updateTubeSelectionUi);
+
                 // Initial check in case the input field is pre-filled on page load
                 toggleClearButton();
 
@@ -297,7 +619,7 @@ $(document).ready(
                     var matchedCount = 0;
 
                     $tubeRows.each(function() {
-                        var tubeName = $(this).find('td:first').text().trim();
+                        var tubeName = $(this).find('.tube-name-cell a').text().trim();
                         var matches = !matcher || matcher.test(tubeName);
                         $(this).toggle(matches);
                         if (matches) {
@@ -310,6 +632,7 @@ $(document).ready(
                         ? matchedCount + ' of ' + totalCount + ' tubes match · ' + totalCount + ' total tubes'
                         : totalCount + ' total tubes';
                     $('#tubeCountInfo').text(countInfo);
+                    updateTubeSelectionUi();
                 });
 
                 if (tubeFilterParam !== null) {
@@ -489,9 +812,23 @@ $(document).ready(
                             }
                             // wrapping all of this to prevent last update
                             // after you turn it off
+                            var selectedTubeNames = $('#idAllTubes .tube-row-select:checked').map(function() {
+                                return $(this).val();
+                            }).get();
+                            var kickCountHadFocus = document.activeElement && document.activeElement.id === 'kickSelectedCount';
                             var html = $(options.containerClass).html();
                             $(options.containerClass).html(data);
                             $(options.containerClassCopy).html(html);
+                            $('#kickSelectedCount').val(kickMoreInputValue);
+                            if (kickCountHadFocus) {
+                                $('#kickSelectedCount').trigger('focus');
+                            }
+                            selectedTubeNames.forEach(function(tubeName) {
+                                $('#idAllTubes .tube-row-select').filter(function() {
+                                    return $(this).val() === tubeName;
+                                }).prop('checked', true);
+                            });
+                            updateTubeSelectionUi();
                             updateTable(options.containerClass, options.containerClassCopy);
                             $('#searchTubes').trigger('keyup');
                             timer = setTimeout(reloader, ms, params, options);

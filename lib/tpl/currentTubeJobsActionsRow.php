@@ -12,7 +12,7 @@ if (!@empty($_COOKIE['tubePauseSeconds'])) {
     <div class="row">
         <div class="col text-end">
             <div class="card  rounded-bottom-2 rounded-top-0 bg-body border-0 shadow-sm">
-            <div class="card-body pt-0">
+            <div class="card-body pt-4">
             
             <div class="row g-1">
                 <div class="col-md-2 col-12">

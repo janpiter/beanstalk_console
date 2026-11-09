@@ -39,7 +39,7 @@ if ($server) {
     </head>
 
     <?php if (!empty($servers) || !empty($server)): ?>
-        <body class="no-nav bg-body-tertiary mt-3" data-bs-theme="dark">
+        <body class="no-nav bg-body-tertiary mt-3 <?php echo (!empty($server) && empty($tube)) ? 'page-all-tubes' : ''; ?>" data-bs-theme="dark">
         <?php else: ?>
         <body class="bg-body-tertiary" data-bs-theme="dark">
         <?php endif ?>
@@ -216,17 +216,20 @@ if ($server) {
                             ?>
                         <?php elseif (!$tube):
                             ?>
-                            <div class="col-12 px-3 pb-3 bg-body rounded-3 rounded-top-0">
+                            <div class="col-12 px-3 pb-3 bg-body rounded-3 rounded-top-0 tube-filter-bar">
                                 <div class="input-group">
                                     <input type="text" class="form-control form-control-sm input-sm search-query border-end-0 shadow-none" id="searchTubes" name="searchTubes" placeholder="Search tubes" aria-describedby="button-addon2">
                                     <button type="button" class="btn clear-search border-start-0" id="clearInput" aria-label="Clear" style="display: block;border-color: rgb(73, 80, 87)!important;">×</button>
                                 </div>
-                                <div id="tubeCountInfo" class="form-text text-body-secondary mt-2" aria-live="polite"><?php echo count(is_array($tubes) ? $tubes : array()); ?> total tubes</div>
+                                <div id="tubeCountInfo" class="form-text text-body-secondary mt-2" aria-live="polite"><?php echo isset($tubes) && is_array($tubes) ? count($tubes) : 0; ?> total tubes</div>
                             </div>
                             <div id="idAllTubes">
                                 <?php require_once dirname(__FILE__) . '/allTubes.php'; ?>
                                 <?php require_once dirname(__FILE__) . '/modalClearTubes.php'; ?>
                             </div>
+                            <?php if ($tplVars['_tplMain'] != 'ajax'): ?>
+                                <?php require_once dirname(__FILE__) . '/tubeBulkFeedback.php'; ?>
+                            <?php endif; ?>
                             <div id='idAllTubesCopy' style="display:none"></div>
                         <?php elseif (!in_array($tube, $tubes)):
                             ?>
