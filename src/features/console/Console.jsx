@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   actionLocation, Alert, Divider, Item, legacyCookie, locationFor, logo, Menu, nameOf, neutral, preference, queueURL,
-  savePreference, serverFields, ServerSummary, TubeTable, tubeFields,
+  savePreference, serverFields, ServerSummary, states, TubeTable, tubeFields,
 } from '../../components/console-ui.jsx';
 import { Icon } from '../../components/icon.jsx';
 import { NavigationPicker } from '../../components/navigation-picker.jsx';
@@ -10,6 +10,7 @@ import { Toaster } from '../../components/sonner.jsx';
 import { ActionDialog, CopyPayloadDialog, defaultSettings } from './actions.jsx';
 import { BulkControls, SampleEditor, Samples, SearchResults, TubeJobs, TubeJobsSkeleton } from './jobs.jsx';
 import { endpoint, request, useResource } from '../../lib/api.js';
+import { clearJobsInBatches } from '../../lib/clear-jobs.js';
 import { copyText } from '../../lib/clipboard.js';
 
 function settingsFromCookies() {
@@ -390,8 +391,13 @@ export default function Console({ appearance, onSignOut }) {
     if (openedLegacyAction.current || !action || sampleEdit) return;
     if (['newSample', 'editSample', 'deleteSample', 'loadSample'].includes(action) && !samples.data) return;
     if (serverKey && !server) return;
+    if (action === 'deleteAll' && tube && !detail.data && !detail.error) return;
     const sample = samples.data?.find(item => item.id === params.get('key'));
     const state = params.get('state') || 'ready';
+    const stats = detail.data?.stats;
+    const clearCount = !stats ? '' : state === 'all'
+      ? states.reduce((total, name) => total + Number(stats['current-jobs-' + name] ?? 0), 0)
+      : stats['current-jobs-' + state] ?? '';
     const count = params.has('count') ? Number(params.get('count')) : undefined;
     const job = { id: params.get('jobid') };
     const removalTarget = serversResource.data?.personalEnabled && servers.find(item => item.endpoint === params.get('removeServer'));
@@ -404,13 +410,13 @@ export default function Console({ appearance, onSignOut }) {
       kick: { type: 'bulk', action: 'kick', tubes: [tube], options: { state: 'any', limit: count ?? 1 } },
       pause: { type: 'bulk', action: count === 0 ? 'resume' : 'pause', tubes: [tube], options: { seconds: count > 0 ? count : undefined } },
       delete: { type: 'bulk', action: 'clear', tubes: [tube], state, options: { limit: 1 } },
-      deleteAll: { type: 'bulk', action: 'clear', tubes: [tube], state },
+      deleteAll: { type: 'bulk', action: 'clear', tubes: [tube], state, ...(tube && { clearCount }) },
       moveJobsTo: { type: 'bulk', action: params.get('destState') === 'buried' ? 'bury' : 'move', tubes: [tube], state, destination: params.get('destTube') },
     };
     openedLegacyAction.current = true;
     if (aliases[action]) startDialog({ ...aliases[action], legacyURL: true });
     else if (['editSample', 'deleteSample', 'loadSample'].includes(action)) toast.error('Sample no longer exists');
-  }, [params, server?.id, samples.data, serversResource.data]);
+  }, [params, server?.id, samples.data, serversResource.data, detail.data, detail.error]);
 
   function closeDialog() {
     if (dialog?.legacyURL) {
@@ -448,7 +454,7 @@ export default function Console({ appearance, onSignOut }) {
     return results;
   }
 
-  async function clearInBackground(names, state, limit = 1000) {
+  async function clearInBackground(names, state, limit = 1000, batched = false) {
     if (clearingJobs.current) {
       setError('A job deletion is already running in this tab');
       return;
@@ -461,20 +467,33 @@ export default function Console({ appearance, onSignOut }) {
     clearingJobs.current = true;
     closeDialog();
     const version = pageVersion.current;
+    const describeProgress = deleted => `${names[0]} · ${deleted.toLocaleString()} / ${limit.toLocaleString()} deleted`;
     const toastId = toast.loading('Deleting jobs…', {
-      description: names.length === 1 ? names[0] : names.length + ' selected tubes',
+      description: batched ? describeProgress(0) : names.length === 1 ? names[0] : names.length + ' selected tubes',
     });
     try {
-      const { results } = await request(queueURL(server, 'tube-actions'), {
+      const clearBatch = batchLimit => request(queueURL(server, 'tube-actions'), {
         method: 'POST',
-        data: { action: 'clear', tubes: names, state, limit },
+        data: { action: 'clear', tubes: names, state, limit: batchLimit },
       });
-      notifyTubeResults('clear', results, toastId);
+      if (batched) {
+        const result = await clearJobsInBatches(limit, async batchLimit => (await clearBatch(batchLimit)).results[0], deleted => {
+          toast.loading('Deleting jobs…', { id: toastId, description: describeProgress(deleted) });
+        });
+        const notify = result.error ? toast.error : toast.success;
+        const reason = result.error || (result.exhausted ? 'No more matching jobs.' : 'Deletion limit reached.');
+        notify(result.error ? 'Job deletion stopped' : 'Job deletion results', {
+          id: toastId, description: describeProgress(result.deleted) + ' · ' + reason,
+        });
+      } else {
+        const { results } = await clearBatch(limit);
+        notifyTubeResults('clear', results, toastId);
+      }
       if (tube && pageVersion.current === version) {
         const latest = await request(queueURL(server, 'tubes', tube)).catch(() => null);
-        if (pageVersion.current === version && (!latest || ['ready', 'reserved', 'delayed', 'buried'].every(
+        if (pageVersion.current === version && (latest ? ['ready', 'reserved', 'delayed', 'buried'].every(
           name => !Number(latest.stats['current-jobs-' + name]),
-        ))) navigate(locationFor(server));
+        ) : !batched)) navigate(locationFor(server));
       }
     } catch (failure) {
       toast.error(failure.message, { id: toastId });
@@ -514,6 +533,14 @@ export default function Console({ appearance, onSignOut }) {
 
   async function submit(form) {
     if (pending.current) return;
+    if (dialog.action === 'clear' && dialog.clearCount !== undefined) {
+      const target = Number(form.get('clearCount'));
+      if (!Number.isSafeInteger(target) || target < 1) {
+        setError('Enter a positive whole number of jobs to delete.');
+        return;
+      }
+      return clearInBackground(dialog.tubes, dialog.state, target, true);
+    }
     if (dialog.action === 'clear') return clearInBackground(dialog.tubes, dialog.state || 'ready', dialog.options?.limit);
     pending.current = true;
     setBusy(true);

@@ -62,13 +62,13 @@ function sampleLink(server, tube, sample, redirect = false) {
   return url.pathname + url.search;
 }
 
-function JobCard({ state, job, server, tube, onAction, onCopy, settings }) {
+function JobCard({ state, job, count, server, tube, onAction, onCopy, settings }) {
   return <div className="col-12 col-sm-4"><div className="card bg-body border-0 shadow-sm"><div className="card-body">
     <a id={'current-jobs-' + state} />
     <div className="text-start">
       <h5 className="mb-2 fw-bold d-inline">Next job in <span className={'job-state-' + state}>{state}</span> state</h5>
       {job && <Menu className="dropdown float-end" button="btn btn-default btn-sm border-0 console-icon-button" title={'More ' + state + ' job actions'} label={<Icon name="more" className="fs-5" />} end>
-        <Item onClick={() => onAction({ type: 'bulk', action: 'clear', state, tubes: [tube] })}>Delete all {state} jobs</Item>
+        <Item onClick={() => onAction({ type: 'bulk', action: 'clear', state, tubes: [tube], clearCount: count })}>Delete all {state} jobs</Item>
         <Item onClick={() => onAction({ type: 'bulk', action: 'move', state, tubes: [tube] })}>Move all {state} to ..</Item>
         {state !== 'ready' && <Item onClick={() => onAction({ type: 'kickJob', job })}>Kick this job</Item>}
       </Menu>}
@@ -162,7 +162,8 @@ export function TubeJobs({ detail, server, tube, samples, onAction, onCopy, sett
       </div></div></div>
     </div></div></section>
     <section className="jobsShowcase"><div className="row mt-3 mb-5 pb-5"><div className="col"><div className="row g-2 mt-0">
-      {states.map(state => <JobCard key={state} {...{ state, job: detail.jobs[state], server, tube, onAction, onCopy, settings }} />)}
+      {states.map(state => <JobCard key={state} count={detail.stats['current-jobs-' + state] ?? ''}
+        {...{ state, job: detail.jobs[state], server, tube, onAction, onCopy, settings }} />)}
     </div></div></div></section>
   </>;
 }

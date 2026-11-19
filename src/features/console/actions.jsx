@@ -90,7 +90,7 @@ export function ActionDialog({ action, close, submit, settings, tubes, busy, err
   const [move, setMove] = useState('new');
   const title = titleFor(action);
   const destructive = action.type.startsWith('delete') || action.type === 'removeServer' || action.action === 'clear';
-  const primary = action.type === 'add' ? 'Save changes'
+  const primary = action.clearCount !== undefined ? 'Delete jobs' : action.type === 'add' ? 'Save changes'
     : ['sample', 'columns', 'settings', 'server'].includes(action.type) ? 'Save' : action.action === 'move' ? 'Move' : title;
   return <Dialog open onOpenChange={open => { if (!open && !busy) close(); }}>
     <DialogContent dismissible={!busy} returnFocus={returnFocus}>
@@ -137,6 +137,11 @@ export function ActionDialog({ action, close, submit, settings, tubes, busy, err
                 <input className="form-check-input" type="radio" name="destinationMode" value={item.name} checked={move === item.name} onChange={() => setMove(item.name)} />{item.name}
               </label>)}
               {action.state === 'ready' && <label className="form-check"><input className="form-check-input" type="radio" name="destinationMode" value="$buried" checked={move === '$buried'} onChange={() => setMove('$buried')} />buried</label>}
+            </> : action.clearCount !== undefined ? <>
+              <p>Delete {action.state === 'all' ? 'ready, delayed, and buried' : action.state} jobs from <strong className="text-break">{action.tubes[0]}</strong>?</p>
+              <Field type="number" name="clearCount" label="Maximum jobs to delete" defaultValue={action.clearCount}
+                min="1" max={Number.MAX_SAFE_INTEGER} step="1" required />
+              <p className="small text-body-secondary mb-0">New jobs do not increase this limit, but they may be included in the jobs deleted.</p>
             </> : action.action === 'clear' && action.state === 'all'
               ? <p className="mb-0">Delete ready, delayed, and buried jobs from <strong className="text-break">{action.tubes.join(', ')}</strong>?</p>
               : <p className="mb-0">{title} on <strong>{action.tubes.join(', ')}</strong>?</p>}
