@@ -391,7 +391,9 @@ export function createApp(env = process.env) {
   const dist = resolve('dist');
   app.get(/^\/beanstalk$/, (request, response) => response.redirect(308, '/beanstalk/' + request.url.slice('/beanstalk'.length)));
   app.get(/^\/(?:beanstalk\/)?index\.php$/, (request, response) => response.redirect(308, request.url.replace('index.php', '')));
-  app.use(['/beanstalk/', '/'], express.static(dist));
+  const staticFiles = express.static(dist, { index: false });
+  app.use('/beanstalk', staticFiles);
+  app.use(staticFiles);
   app.get(['/', '/beanstalk/'], (_request, response) => response.sendFile(join(dist, 'index.html')));
   app.use((error, _request, response, _next) => {
     const status = error.status || 500;
