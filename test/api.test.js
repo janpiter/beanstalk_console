@@ -69,8 +69,14 @@ test('loads legacy samples and serializes concurrent edits without dropping data
   assert.equal((await call('/samples/' + responses[2].data.id, 'DELETE')).status, 404);
 });
 
-test('requires authentication to enable personal servers and confines them to the browser cookie', async t => {
-  assert.throws(() => createApp({ ALLOW_PERSONAL_SERVERS: 'true' }), /require console authentication/);
+test('allows personal server management by default without sign-in', async t => {
+  const { call } = await fixture(t, { HOST: '0.0.0.0' });
+  assert.equal((await call('/session')).data.enabled, false);
+  assert.equal((await call('/servers')).data.personalEnabled, true);
+  assert.equal((await call('/servers', 'POST', { address: '127.0.0.1:11301' })).status, 201);
+});
+
+test('enforces sign-in when configured and confines personal servers to the browser cookie', async t => {
   const { call } = await fixture(t, { CONSOLE_USERNAME: 'operator', CONSOLE_PASSWORD: 'local-test', ALLOW_PERSONAL_SERVERS: 'true' });
   const headers = { Authorization: 'Basic ' + Buffer.from('operator:local-test').toString('base64') };
   const unauthorized = await call('/servers');
@@ -101,7 +107,7 @@ test('requires authentication to enable personal servers and confines them to th
 
 test('adds, edits, hides, and restores browser servers on a direct loopback connection', async t => {
   assert.throws(() => createApp({ HOST: '0.0.0.0', ALLOW_PERSONAL_SERVERS: 'local' }), /loopback bind address/);
-  const { call, legacy } = await fixture(t);
+  const { call, legacy } = await fixture(t, { ALLOW_PERSONAL_SERVERS: 'local' });
   const initial = await call('/servers');
   const [original] = initial.data.servers;
   assert.equal(initial.data.personalEnabled, true);

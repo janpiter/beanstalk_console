@@ -2,13 +2,13 @@ services:
   web:
     build: .
     ports:
-      - "${CONSOLE_BIND:-127.0.0.1}:${CONSOLE_PORT:-3080}:3080"
+      - "${CONSOLE_BIND:-0.0.0.0}:${CONSOLE_PORT:-3080}:3080"
     environment:
       BEANSTALKD_HOST: beanstalkd
       BEANSTALK_SERVERS: "${BEANSTALK_SERVERS:-}"
       CONSOLE_USERNAME: "${CONSOLE_USERNAME:-}"
       CONSOLE_PASSWORD: "${CONSOLE_PASSWORD:-}"
-      ALLOW_PERSONAL_SERVERS: "${ALLOW_PERSONAL_SERVERS:-false}"
+      ALLOW_PERSONAL_SERVERS: "${ALLOW_PERSONAL_SERVERS:-true}"
       CONSOLE_SECURE_COOKIES: "${CONSOLE_SECURE_COOKIES:-false}"
     volumes:
       - console_data:/data

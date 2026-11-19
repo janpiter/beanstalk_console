@@ -53,7 +53,7 @@ Compose, apply changes with `docker compose up -d web`.
 | `BEANSTALKD_HOST`, `BEANSTALKD_PORT` | Add a default server, with port 11300 if omitted. With neither server setting present, the console uses `127.0.0.1:11300`. |
 | `HOST`, `PORT` | HTTP bind address and port. Defaults to `127.0.0.1:3080`. |
 | `CONSOLE_USERNAME`, `CONSOLE_PASSWORD` | Set both to enable web sign-in. Sessions last up to 12 hours and end when the Node process restarts. API clients can send an explicit HTTP Basic authorization header. |
-| `ALLOW_PERSONAL_SERVERS` | Allows operators to manage the browser's server list and open direct server links. If unset, access is limited to direct loopback requests. Use `false` to disable it, `local` to explicitly require loopback, or `true` to enable it with console authentication. Enable remote access only for operators trusted to choose TCP destinations reachable by the API. |
+| `ALLOW_PERSONAL_SERVERS` | Allows users to manage the browser's server list and open direct server links. Defaults to `true` for direct Node and Docker Compose deployments. Use `false` to disable it or `local` to allow only direct loopback access on a loopback bind. If sign-in is disabled, anyone who can reach the console can use this feature. |
 | `CONSOLE_SECURE_COOKIES` | Set to `true` when serving over HTTPS to mark the session and personal server cookies as secure. |
 | `SHARED_SERVERS_STORAGE` | Path to the shared-link server registry. Defaults to `shared-servers.json` alongside the sample data file. Use a single console instance for writes. |
 | `SAMPLE_STORAGE` | Path to the writable sample data file. Defaults to the checkout's `storage.json`. Its parent directory must be writable so the console can replace the file atomically. |
@@ -69,8 +69,10 @@ docker compose up --build
 ```
 
 Open <http://127.0.0.1:3080>. The Node container connects to the Compose
-beanstalkd service. The host bind and port can be changed with `CONSOLE_BIND`
-and `CONSOLE_PORT`. Sample jobs are stored in the `console_data` volume.
+beanstalkd service. By default, Compose publishes port `3080` on all IPv4
+interfaces (`0.0.0.0`). Set `CONSOLE_BIND=127.0.0.1` for host-only access or
+use `CONSOLE_PORT` to change the published port. Sample jobs are stored in
+the `console_data` volume.
 If you already have a `storage.json` backup, you can import it into an empty
 volume with this command:
 
@@ -123,7 +125,7 @@ shared links usable. Older personal entries can be registered by saving them in
 **Edit Server** once. Recipients need access to the console's HTTP address and
 its configured authentication.
 
-On a direct loopback connection or a console with authenticated personal
+On a direct loopback connection or a console with personal
 server access enabled, `server=host:port` can also open an address that is
 absent from the configured and personal lists. This does not save the address.
 

@@ -74,11 +74,10 @@ export function createApp(env = process.env) {
   }
 
   const auth = consoleAuth(env, decodeCookies);
-  const personalEnabled = env.ALLOW_PERSONAL_SERVERS === 'true';
+  const personalMode = env.ALLOW_PERSONAL_SERVERS || 'true';
+  const personalEnabled = personalMode === 'true';
   const loopbackBind = loopbackHosts.has(env.HOST || '127.0.0.1');
-  const localManagement = env.ALLOW_PERSONAL_SERVERS === 'local' ||
-    (env.ALLOW_PERSONAL_SERVERS === undefined && loopbackBind);
-  if (personalEnabled && !auth.enabled) throw new Error('Personal servers require console authentication');
+  const localManagement = personalMode === 'local';
   if (localManagement && !loopbackBind) {
     throw new Error('Local server management requires a loopback bind address');
   }
