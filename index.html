@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/src/assets/bs-rounded.png" />
+    <title>Beanstalk Console</title>
+    <script>
+      (() => {
+        let preference;
+        try { preference = JSON.parse(localStorage.getItem('beanstalk-php-ui-theme')); } catch {}
+        if (preference !== 'light' && preference !== 'dark') preference = 'system';
+        const root = document.documentElement;
+        const fontSize = document.cookie.match(/(?:^|;\s*)console_font_size=(small|default|large)(?:;|$)/);
+        root.dataset.fontSize = fontSize?.[1] || 'small';
+        root.dataset.themePreference = preference;
+        root.dataset.bsTheme = preference === 'system'
+          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : preference;
+      })();
+    </script>
+  </head>
+  <body class="no-nav bg-body-tertiary mt-3">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

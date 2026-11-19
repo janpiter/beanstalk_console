@@ -1,5 +1,12 @@
 .idea
-/vendor
+/legacy/vendor
+/legacy/storage.json
 .vagrant
 nbproject/
 .DS_Store
+/node_modules
+/dist
+.env
+
+/storage.json
+/shared-servers.json

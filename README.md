@@ -1,114 +1,163 @@
-# Beanstalk console ![English version](http://upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/22px-Flag_of_the_United_Kingdom.svg.png)
+# Beanstalk Console
 
-[![Latest Stable Version](https://poser.pugx.org/ptrofimov/beanstalk_console/v/stable.png)](https://packagist.org/packages/ptrofimov/beanstalk_console) [![Total Downloads](https://poser.pugx.org/ptrofimov/beanstalk_console/downloads.png)](https://packagist.org/packages/ptrofimov/beanstalk_console) [![License](https://poser.pugx.org/ptrofimov/beanstalk_console/license.png)](https://packagist.org/packages/ptrofimov/beanstalk_console)
+A beanstalkd administration console built with React, Vite, and Node.js. The
+browser uses a same-origin JSON API, and Node connects to beanstalkd over TCP.
 
-*Admin console for [Beanstalk](http://kr.github.com/beanstalkd) queue server, written in PHP*
+## Project layout
 
-![Beanstalk Console Screenshot](https://raw.github.com/ptrofimov/beanstalk_console/master/cover/btconsole.png)
+| Path | Contents |
+| --- | --- |
+| `index.html`, `vite.config.js` | Vite entry page and development configuration |
+| `src/main.jsx`, `src/App.jsx` | React entry point and application |
+| `src/components/`, `src/features/console/` | Shared interface components and console features |
+| `src/lib/`, `src/assets/`, `src/styles/` | API client, images, and styles |
+| `server/`, `test/` | Node API and its tests |
+| [`legacy/`](legacy/README.md) | Standalone PHP version and its deployment files |
 
-**Features**
+## Run locally
 
-- Common list of servers in config for all users + optional Basic Auth
-- Global server list can be set via BEANSTALK_SERVERS environment variable
-- Each user can add its own personal Beanstalkd server
-- Full list of available tubes
-- Complete statistics about jobs in tubes
-- Realtime auto-update with highlighting of changed values
-- You can view jobs in ready/delayed/buried states in every tube
-- You can add/kick/delete jobs in every tube
-- You can select multiple tubes by regExp and clear them
-- You can move jobs between tubes
-- Ability to Pause tubes
-- Saved jobs (store sample jobs as a template, kick/edit them, very useful for development)
-- Search jobs data field
-- Customizable UI (code highlighter, choose columns, edit auto refresh seconds, pause tube seconds)
+Use Node.js 22.12 or newer. With a beanstalkd instance listening on port 11300:
 
-Change log on [Releases](https://github.com/ptrofimov/beanstalk_console/releases).
+```sh
+npm ci
+npm run build
+npm start
+```
 
-**Installation**
+Open <http://127.0.0.1:3080>. For a different queue server or several configured
+servers, set a comma-separated server list in the checkout's `.env` file or
+pass it when starting the console:
 
-### Use composer (*recommended*)
+```sh
+BEANSTALK_SERVERS='Local=127.0.0.1:11300,Workers=workers.internal:11300' npm start
+```
 
-If you don't have Composer yet, download it following the instructions on http://getcomposer.org/ or just run the following command:
+### Development
 
-    curl -s http://getcomposer.org/installer | php
+After `npm ci`, run `npm run api` and `npm run dev` in separate terminals.
+Open the URL printed by Vite. The development server proxies `/api`,
+`/beanstalk/api`, and legacy form submissions to `http://127.0.0.1:3080` by
+default. Set `VITE_API_TARGET` in the Vite process environment when the API
+listens elsewhere.
 
-Then, use the `create-project` command to generate a new application:
+## Configuration
 
-    php composer.phar create-project ptrofimov/beanstalk_console -s dev path/to/install
+If you don't have a `.env` file yet, copy [`.env.example`](.env.example) to
+`.env` in the project root. Fill in `CONSOLE_USERNAME` and `CONSOLE_PASSWORD`
+to enable sign-in, then restart `npm start` or `npm run api`. With Docker
+Compose, apply changes with `docker compose up -d web`.
 
-Composer will install the Beanstalk Console and all its dependencies under the `path/to/install` directory.
+| Environment variable | Behavior |
+| --- | --- |
+| `BEANSTALK_SERVERS` | Comma-separated `label=host:port` or `beanstalk://host:port` entries. A bare hostname uses port 11300. |
+| `BEANSTALKD_HOST`, `BEANSTALKD_PORT` | Add a default server, with port 11300 if omitted. With neither server setting present, the console uses `127.0.0.1:11300`. |
+| `HOST`, `PORT` | HTTP bind address and port. Defaults to `127.0.0.1:3080`. |
+| `CONSOLE_USERNAME`, `CONSOLE_PASSWORD` | Set both to enable web sign-in. Sessions last up to 12 hours and end when the Node process restarts. API clients can send an explicit HTTP Basic authorization header. |
+| `ALLOW_PERSONAL_SERVERS` | Allows operators to manage the browser's server list and open direct server links. If unset, access is limited to direct loopback requests. Use `false` to disable it, `local` to explicitly require loopback, or `true` to enable it with console authentication. Enable remote access only for operators trusted to choose TCP destinations reachable by the API. |
+| `CONSOLE_SECURE_COOKIES` | Set to `true` when serving over HTTPS to mark the session and personal server cookies as secure. |
+| `SHARED_SERVERS_STORAGE` | Path to the shared-link server registry. Defaults to `shared-servers.json` alongside the sample data file. Use a single console instance for writes. |
+| `SAMPLE_STORAGE` | Path to the writable sample data file. Defaults to the checkout's `storage.json`. Its parent directory must be writable so the console can replace the file atomically. |
 
-### Setup using vagrant
+The console creates each storage file on its first write. The parent directory
+must already exist and be writable. Keep these files in persistent storage if
+you want to retain samples and shared server links across deployments.
 
-Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [vagrant](http://www.vagrantup.com/downloads.html) then run (from project root):
+## Docker Compose
 
-    vagrant up
+```sh
+docker compose up --build
+```
 
-After provision beanstalk console will be available at [http://localhost:7654](http://localhost:7654) (port could be configured in Vagrantfile)
+Open <http://127.0.0.1:3080>. The Node container connects to the Compose
+beanstalkd service. The host bind and port can be changed with `CONSOLE_BIND`
+and `CONSOLE_PORT`. Sample jobs are stored in the `console_data` volume.
+If you already have a `storage.json` backup, you can import it into an empty
+volume with this command:
 
-### Download an Archive File
+```sh
+docker compose exec -T web sh -c 'set -C; cat > /data/storage.json' < storage.json
+```
 
-[Download](https://github.com/ptrofimov/beanstalk_console/archive/master.zip), unzip files to your *www* directory and launch from *public* directory, enjoy!
+## Using the console
 
-### Run as a Docker container
+- **Navigation.** Open a server or tube from the searchable selectors. The
+  tube list also has its own filter. The console preserves the auto-refresh
+  choice in the browser and carries `auto_refresh` between console pages.
+- **Sign-in and appearance.** When authentication is enabled, the console
+  opens a web sign-in form at the requested URL. To end the session, use
+  **Settings → Sign out**. The theme follows the system by default, and
+  **Small** is the initial font size. Both can be changed under Appearance.
+- **Jobs and samples.** Tube details show the next ready, delayed, and buried
+  jobs. Search scans a bounded range of job IDs and can continue from the
+  next range. **View full payload** formats valid JSON automatically. **Format
+  JSON** is available in **Add Job** and the sample editor. Plain text stays
+  as entered or stored.
 
-Install [Docker](https://docs.docker.com/installation/) then build and run with the following command (from project root):
+### Bulk tube actions
 
-    docker build --rm -t beanstalk_console .
-    docker run -d -p "80:80" --name beanstalk_console beanstalk_console
+On **All tubes**, select tubes to reveal the floating action bar. It offers
+kick actions, **Pause**, **Resume**, and **Clear jobs**. The table header
+checkbox selects the tubes visible under the current filter. The action bar
+counts previously selected tubes that are hidden by the filter too.
 
-If you would rather just run the existing automated build of this project, run (from project root):
+**Clear jobs** opens a confirmation with the selected tube names. The
+operation runs in the background while you continue using the console. It
+deletes ready, delayed, and buried jobs. Reserved jobs are skipped. Each
+request accepts up to 50 tubes and stops at 1,000 deletions per tube or when
+the shared 10-second processing budget is reached. The result notification
+reports deletions per tube and flags partial results when a limit is reached
+or a request times out.
 
-    docker run -d -p "80:80" -e APACHE_PORT=80 --name beanstalk_console agaveapi/beanstalkd-console
+Moving jobs creates new job IDs in the destination tube and retains the
+payload, priority, TTR, and remaining delay. Buried jobs move as ready jobs.
+The operation result reports copies whose source deletion could not be
+confirmed.
 
-To configure webapp with a custom beanstalk server to load at runtime, set the `BEANSTALKD_HOST` and `BEANSTALKD_PORT` environment variables.
+## Sharing server links
 
-    docker run -d -p 80:80 \
-               --name beanstalk_console \
-               -e 'BEANSTALKD_HOST=beanstalkd' \
-               -e 'BEANSTALKD_PORT=11300' \
-               beanstalk_console
+Copy a server or tube URL from the address bar. Configured servers and servers
+saved through **Add server** or **Edit Server** resolve on the same console
+instance without the sender's browser cookie. Server list customization still
+belongs to the current browser. Removing an entry from that list leaves existing
+shared links usable. Older personal entries can be registered by saving them in
+**Edit Server** once. Recipients need access to the console's HTTP address and
+its configured authentication.
 
-To spin up a console with a beanstalkd server all at once, install [Docker Compose](https://docs.docker.com/compose/) and run (from project root):
+On a direct loopback connection or a console with authenticated personal
+server access enabled, `server=host:port` can also open an address that is
+absent from the configured and personal lists. This does not save the address.
 
-    docker-compose up
+## Legacy console URLs
 
-**Authors:** Petr Trofimov, Sergey Lysenko, Pentium10
+The React console can be opened at `/` or `/beanstalk/`. Both entry points
+accept links using the PHP query parameters, for example:
 
---------------------------------------------------
+```text
+/beanstalk/?server=127.0.0.1:11300
+/beanstalk/?server=127.0.0.1:11300&filter=emails*&auto_refresh=true
+/beanstalk/?server=127.0.0.1:11300&tube=emails&action=search&searchStr=retry&limit=25
+/beanstalk/?action=editSample&key=<sample-key>
+```
 
-# Beanstalk консоль ![Русская версия](http://upload.wikimedia.org/wikipedia/en/thumb/f/f3/Flag_of_Russia.svg/22px-Flag_of_Russia.svg.png)
+Old action names and form field names are still accepted at these URLs.
+Links that change queue data open a confirmation and submit a POST. Direct
+GET requests to those links leave the queue intact. Polling reads JSON from
+the Node API instead of the PHP HTML fragment endpoint.
 
-*Административная консоль для сервера очередей [Beanstalk](http://kr.github.com/beanstalkd), написанная на PHP*
+## Migrating from PHP
 
-**Возможности**
+See the [PHP console README](legacy/README.md) for the standalone legacy
+app. Copy server configuration from `legacy/config.php` to the Node
+environment variables. The Node console reads the existing version-1 sample
+format and uses `storage.json` in the repository root by default. The PHP
+console uses `legacy/storage.json`. Back up sample data before migrating and
+give one console instance ownership of writes to each file.
 
-- Общий список серверов в конфиге для всех пользователей
-- Глобальный список серверов может быть установлен через переменную окружения BEANSTALK_SERVERS
-- Каждый пользователь может добавить свой персональный сервер
-- Полный список доступных труб
-- Полная статистика тасков в трубах
-- Realtime-обновление с подсветкой изменившихся значений
-- Вы можете просматривать таски в каждой трубе (ready/delayed/buried)
-- Вы можете выполнять операции с тасками в каждой трубе (add/kick/delete)
+If personal servers are enabled, the Node console can read the old
+`beansServers` cookie when it is available on the same address.
 
-**Установка**
+## Verification
 
-[Скачайте](https://github.com/ptrofimov/beanstalk_console/archive/master.zip), положите распакованные файлы в www папку и наслаждайтесь!
-
-**Установка с помощью vagrant**
-
-Установите [VirtualBox](https://www.virtualbox.org/wiki/Downloads) и [vagrant](http://www.vagrantup.com/downloads.html) затем запустите (в корневой директории проекта):
-
-    vagrant up
-
-После завершения провизии консоль будет доступна по адресу [http://localhost:7654](http://localhost:7654) (порт можно сконфигурировать в Vagrantfile)
-
-**Авторы:** Петр Трофимов, Сергей Лысенко, Pentium10
-
---------------------------------------------------
-
-** Previous version is available [here](https://github.com/ptrofimov/beanstalk_console/tree/1.0)**
-
-*Keywords: beanstalk, beanstalkd, queue, console, gui, admin, web admin, monitoring, stats, interface, php*
+Run `npm test` for the API and sample storage tests. Set `BEANSTALKD_BIN` to
+a local beanstalkd executable to include the queue integration test. The test
+starts an isolated daemon and uses temporary sample storage.

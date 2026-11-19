@@ -16,6 +16,8 @@ storage.json
 /vendor
 nbproject/
 
-.vagrant
-vagrant
-Vagrantfile
+legacy/
+
+node_modules
+dist
+.env
