@@ -250,9 +250,11 @@ test('manages jobs and tubes through the API against an isolated beanstalkd', { 
   assert.equal((await legacy(getDelete, {})).status, 200);
   assert.equal((await call(root + '/jobs/' + oldJob.data.id)).status, 404);
 
-  const serialized = await call(root + '/jobs', 'POST', { tube: 'legacy-data', payload: 'a:1:{s:4:"task";s:6:"cafée";}' });
-  const decoded = await call(root + '/jobs/' + serialized.data.id);
-  assert.deepEqual(JSON.parse(decoded.data.unserialized), { task: 'cafée' });
+  const legacyPayload = 'a:1:{s:4:"task";s:6:"cafée";}';
+  const serialized = await call(root + '/jobs', 'POST', { tube: 'legacy-data', payload: legacyPayload });
+  const legacyJob = await call(root + '/jobs/' + serialized.data.id);
+  assert.equal(legacyJob.data.payload, legacyPayload);
+  assert.equal(legacyJob.data.encoding, 'utf8');
   await call(root + '/jobs/' + serialized.data.id, 'DELETE');
   const invalid = await call(root + '/jobs', 'POST', { tube: tube + '\n', payload });
   assert.equal(invalid.status, 400);

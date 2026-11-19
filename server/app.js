@@ -406,6 +406,8 @@ export function createApp(env = process.env) {
   const staticFiles = express.static(dist, { index: false });
   app.use('/beanstalk', staticFiles);
   app.use(staticFiles);
+  app.get(['/favicon.ico', '/beanstalk/favicon.ico'],
+    (_request, response) => response.redirect(302, './favicon.png'));
   app.get(['/', '/beanstalk/'], (_request, response) => response.sendFile(join(dist, 'index.html')));
   app.use((error, _request, response, _next) => {
     const status = error.status || 500;

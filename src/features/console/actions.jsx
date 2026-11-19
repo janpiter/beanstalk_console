@@ -7,7 +7,7 @@ import { DestinationPicker, serverPickerOption } from '../../components/navigati
 import { PayloadEditor } from '../../components/payload.jsx';
 import { sampleDestinations } from '../../lib/sample-destinations.js';
 
-const defaults = { pause: -1, interval: 500, auto: false, searchLimit: 25, json: true, unserialize: true, base64: false, highlight: true };
+const defaults = { pause: -1, searchLimit: 25, json: true, base64: false, highlight: true };
 export { defaults as defaultSettings };
 
 export function CopyPayloadDialog({ payload, close, returnFocus }) {
@@ -182,7 +182,7 @@ function SaveSampleFields({ action, tubes }) {
 function ServerFields({ server }) {
   return <div className="console-preference-form">
     <div className="console-server-address">
-      <Field name="host" label="Host" defaultValue={server?.host || 'localhost'} placeholder="Hostname or IP address"
+      <Field name="host" label="Host" defaultValue={server?.host ?? ''} placeholder="Hostname or IP address"
         fieldClassName="" autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength="253" required />
       <Field name="port" label="Port" defaultValue={server?.port ?? 11300} fieldClassName=""
         type="number" min="1" max="65535" required />
@@ -227,23 +227,19 @@ function SettingsSwitch({ name, checked, children }) {
 function Settings({ settings }) {
   return <div className="console-preference-form">
     <fieldset className="console-settings-section">
-      <legend>Refresh and queue</legend>
+      <legend>Queue and search</legend>
       <div className="console-settings-grid">
-        <Field name="autoRefreshTimeoutMs" label="Refresh interval (ms)" defaultValue={settings.interval}
-          fieldClassName="" type="number" min="100" required />
         <Field name="tubePauseSeconds" label="Tube pause (sec)" defaultValue={settings.pause}
           fieldClassName="" type="number" min="-1" max="4294967295" aria-describedby="pause-value-hint" required />
         <Field name="searchResultLimit" label="Search result limit" defaultValue={settings.searchLimit}
           fieldClassName="" type="number" min="1" max="100" required />
       </div>
-      <p className="console-field-hint mb-0" id="pause-value-hint">For tube pause, −1 uses 1 hour and 0 resumes the tube.</p>
-      <SettingsSwitch name="isEnabledAutoRefreshLoad" checked={settings.auto}>Auto-refresh on load</SettingsSwitch>
+      <p className="console-field-hint mb-0" id="pause-value-hint">A pause of −1 or 0 uses 1 hour. Use Resume to unpause.</p>
     </fieldset>
     <fieldset className="console-settings-section">
       <legend>Job data display</legend>
       <div className="console-settings-switches">
         <SettingsSwitch name="json" checked={settings.json}>Decode JSON</SettingsSwitch>
-        <SettingsSwitch name="unserialize" checked={settings.unserialize}>Decode PHP serialized data</SettingsSwitch>
         <SettingsSwitch name="base64" checked={settings.base64}>Decode Base64</SettingsSwitch>
         <SettingsSwitch name="highlight" checked={settings.highlight}>Syntax highlighting</SettingsSwitch>
       </div>

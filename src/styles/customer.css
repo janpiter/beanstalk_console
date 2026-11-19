@@ -101,10 +101,6 @@ ol.inside, ul.inside {
     color: #449d44;
 }
 
-#autoRefresh, #autoRefreshSummary {
-    margin-top: 4.5px;
-}
-
 .ellipsize {
     white-space: nowrap;
     overflow: hidden;

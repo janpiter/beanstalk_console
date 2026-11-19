@@ -26,7 +26,6 @@ function JsonValue({ value, property }) {
 const jsonPreviewSettings = { json: true, highlight: true };
 
 function displayPayload(job, settings) {
-  if (settings.unserialize && job.unserialized !== undefined) return job.unserialized;
   let data = job.payload;
   if (job.encoding === 'utf8' && settings.base64) {
     try {
@@ -38,10 +37,6 @@ function displayPayload(job, settings) {
 
 function Payload({ job, settings }) {
   const data = displayPayload(job, settings);
-  if (settings.unserialize && job.unserialized !== undefined) {
-    const decoded = JSON.parse(data);
-    return typeof decoded === 'object' ? <JsonValue value={decoded} /> : String(decoded ?? '');
-  }
   if (settings.json) {
     try { return <JsonValue value={JSON.parse(data)} />; } catch { /* Display plain text. */ }
   }

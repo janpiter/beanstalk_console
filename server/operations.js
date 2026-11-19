@@ -1,21 +1,12 @@
-import { unserialize } from 'php-serialize';
-
 export const states = ['ready', 'delayed', 'buried'];
 
 export function jobView(job) {
   if (!job) return null;
   const payload = job.data.toString('utf8');
   const text = Buffer.from(payload, 'utf8').equals(job.data);
-  let unserialized;
-  if (text && job.data.length <= 64 * 1024 && /^(?:[aibds]:|N;)/.test(payload)) {
-    try {
-      const value = unserialize(payload, Object.create(null), { strict: true, encoding: 'utf8' });
-      unserialized = JSON.stringify(value, (_key, item) => typeof item === 'bigint' ? String(item) : item);
-    } catch { /* Unrecognized values and PHP classes are displayed as raw text. */ }
-  }
   return {
     id: job.id, stats: job.stats,
-    payload: text ? payload : job.data.toString('base64'), encoding: text ? 'utf8' : 'base64', unserialized,
+    payload: text ? payload : job.data.toString('base64'), encoding: text ? 'utf8' : 'base64',
   };
 }
 

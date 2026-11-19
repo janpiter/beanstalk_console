@@ -13,7 +13,6 @@ export default defineConfig({
       });
     },
   }],
-  publicDir: false,
   base: './',
   server: {
     proxy: {

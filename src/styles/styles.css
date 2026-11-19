@@ -20,8 +20,6 @@ button.nav-link {
 }
 
 .nav-tabs button.nav-link { justify-content: center; }
-.console-settings-button > span { width: 100%; }
-
 .btn-close {
   box-sizing: border-box;
   width: var(--console-control-height);
@@ -43,16 +41,6 @@ button.nav-link {
 .console-icon-button .console-icon,
 .console-settings-button .console-icon {
   font-size: 1rem;
-}
-
-@media (min-width: 576px) {
-  .navbar .navbar-nav .console-settings-button {
-    display: grid;
-    place-items: center;
-    width: var(--console-control-height);
-    padding: 0;
-    border-radius: var(--bs-border-radius-sm);
-  }
 }
 
 .tube-paused-indicator .console-icon { font-size: .9rem; }

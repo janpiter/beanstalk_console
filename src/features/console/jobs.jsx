@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { useResource } from '../../lib/api.js';
 import { sampleDestinations } from '../../lib/sample-destinations.js';
 import { actionLocation, ActionLink, Alert, Divider, empty, Item, locationFor, Menu, nameOf, neutral, queueURL, Skeleton, states, success, textLink } from '../../components/console-ui.jsx';
@@ -342,32 +342,40 @@ export function SampleEditor({ sample, servers, save, busy, error }) {
   </section>;
 }
 
-function SearchPayload({ job, query, settings }) {
-  const [expanded, setExpanded] = useState(false);
+function SearchPayloadPreview({ job, query }) {
   const { payload, encoding } = job;
   const previewLength = 240;
   const match = encoding === 'utf8' ? payload.indexOf(query) : -1;
   const start = Math.max(0, match - 60);
   const end = Math.min(payload.length, start + previewLength);
   const matchEnd = Math.min(match + query.length, end);
-  return <>
-    {encoding === 'base64' && <small className="d-block text-body-secondary mb-1">Base64</small>}
-    <div className="job-search-preview font-monospace">
-      {start > 0 && '…'}
-      {match < 0 ? payload.slice(start, end) : <>
-        {payload.slice(start, match)}<mark>{payload.slice(match, matchEnd)}</mark>{payload.slice(matchEnd, end)}
-      </>}
-      {end < payload.length && '…'}
-    </div>
-    {payload && <details className="job-search-payload mt-2" onToggle={event => setExpanded(event.currentTarget.open)}>
-      <summary>View full payload</summary>
-      {expanded && <FullPayload job={job} settings={settings} />}
-    </details>}
-  </>;
+  const suffix = end < payload.length ? '…' : '';
+  if (!payload) return <span className="text-body-secondary">Empty payload</span>;
+  return <div className="job-search-preview font-monospace">
+    {encoding === 'base64' && <span className="job-search-encoding">Base64</span>}
+    {match < 0 ? <span>{payload.slice(start, end)}{suffix}</span> : <>
+      {start < match && <span className="job-search-preview-context">{start > 0 && '…'}{payload.slice(start, match)}</span>}
+      <mark>{payload.slice(match, matchEnd)}</mark>
+      <span>{payload.slice(matchEnd, end)}{suffix}</span>
+    </>}
+  </div>;
+}
+
+function SearchSkeletonRows() {
+  return [0, 1, 2, 3, 4].map(row => <tr key={row}>
+    <td><Skeleton className="skeleton-stat" /></td>
+    <td><Skeleton className="job-search-skeleton-state" /></td>
+    <td><Skeleton className="job-search-skeleton-preview" /></td>
+    <td><div className="d-flex justify-content-end gap-1">
+      <Skeleton className="skeleton-button job-search-payload-toggle" />
+      <Skeleton className="skeleton-button skeleton-actions" />
+    </div></td>
+  </tr>);
 }
 
 export function SearchResults({ server, tube, query, results, settings, onAction, next, retry }) {
   const heading = useRef(null);
+  const [openPayload, setOpenPayload] = useState(null);
   const { data, error } = results;
   const loading = !data && !error;
   return <section id="searchResult" className="card border-0 shadow-sm mt-4" aria-labelledby="job-search-heading">
@@ -385,27 +393,45 @@ export function SearchResults({ server, tube, query, results, settings, onAction
         </div>
         <a className={neutral} href={locationFor(server, tube)}><Icon name="back" /> Back to tube</a>
       </div>
-      {loading && <div className="console-inset rounded p-3" aria-hidden="true">
-        <Skeleton className="skeleton-title" />
-        <div className="mt-2"><Skeleton className="skeleton-name" /></div>
-      </div>}
       {error && <div className="d-flex flex-wrap align-items-center gap-2">
         <div className="text-danger-emphasis" role="alert">Search failed. {error}</div>
         <button type="button" className={neutral} onClick={retry}>Retry search</button>
       </div>}
-      {!error && data?.jobs.length > 0 && <div className="table-responsive job-search-table border rounded">
-        <table className="table align-middle mb-0" aria-label="Matching jobs">
-          <thead><tr><th scope="col" className="text-nowrap">Job ID</th><th scope="col">State</th><th scope="col">Payload</th><th scope="col" className="text-center">Actions</th></tr></thead>
-          <tbody>{data.jobs.map(job => <tr key={job.id}>
-            <td className="font-monospace text-nowrap">{job.id}</td>
-            <td><span className={'job-search-state job-state-' + job.stats.state}>{nameOf(job.stats.state)}</span></td>
-            <td className="job-search-data"><SearchPayload job={job} query={query} settings={settings} /></td>
-            <td className="text-center"><Menu button={neutral + ' console-icon-button'} title={'Actions for job #' + job.id} label={<Icon name="more" />} end>
-              {job.encoding === 'utf8' && <Item onClick={() => onAction({ type: 'sample', job, data: { tubes: [tube] } })}><Icon name="add" /> Add to samples</Item>}
-              <Item onClick={() => onAction({ type: 'deleteJob', job })}><Icon name="trashSimple" weight="regular" /> Delete</Item>
-              {job.stats.state !== 'ready' && <Item onClick={() => onAction({ type: 'kickJob', job })}><Icon name="fastForward" weight="fill" /> Kick</Item>}
-            </Menu></td>
-          </tr>)}</tbody>
+      {(loading || (!error && data?.jobs.length > 0)) && <div className="table-responsive job-search-table border rounded">
+        <table className="table table-hover align-middle mb-0" aria-label="Matching jobs" aria-busy={loading}>
+          <thead><tr><th scope="col" className="job-search-id">Job ID</th><th scope="col" className="job-search-state-column">State</th><th scope="col">Payload preview</th><th scope="col" className="job-search-actions-column text-end">Actions</th></tr></thead>
+          {loading ? <tbody aria-hidden="true"><SearchSkeletonRows /></tbody> : <tbody>{data.jobs.map(job => {
+            const expanded = Boolean(job.payload && openPayload?.id === job.id && openPayload.url === results.url);
+            const panelId = 'search-job-payload-' + job.id;
+            const toggleLabel = expanded ? 'Hide payload' : 'View payload';
+            return <Fragment key={job.id}>
+              <tr>
+                <th scope="row" className="font-monospace fw-normal text-break">{job.id}</th>
+                <td><span className={'job-search-state job-state-' + job.stats.state}>{nameOf(job.stats.state)}</span></td>
+                <td><SearchPayloadPreview job={job} query={query} /></td>
+                <td><div className="d-flex justify-content-end gap-1">
+                  {job.payload && <button type="button" className={neutral + ' job-search-payload-toggle text-nowrap'}
+                    aria-label={toggleLabel + ' for job #' + job.id} aria-expanded={expanded} aria-controls={expanded ? panelId : undefined}
+                    onClick={() => setOpenPayload(expanded ? null : { id: job.id, url: results.url })}>
+                    <Icon name="caretDown" /> {toggleLabel}
+                  </button>}
+                  <Menu button={neutral + ' console-icon-button'} title={'Actions for job #' + job.id} label={<Icon name="more" />} end>
+                    {job.encoding === 'utf8' && <Item onClick={() => onAction({ type: 'sample', job, data: { tubes: [tube] } })}><Icon name="add" /> Add to samples</Item>}
+                    <Item onClick={() => onAction({ type: 'deleteJob', job })}><Icon name="trashSimple" weight="regular" /> Delete</Item>
+                    {job.stats.state !== 'ready' && <Item onClick={() => onAction({ type: 'kickJob', job })}><Icon name="fastForward" weight="fill" /> Kick</Item>}
+                  </Menu>
+                </div></td>
+              </tr>
+              {expanded && <tr className="job-search-payload-row">
+                <td colSpan={4}>
+                  <div className="job-search-payload-panel" id={panelId}>
+                    <div className="text-body-secondary fw-semibold">Payload · <span className="font-monospace">#{job.id}</span></div>
+                    <FullPayload job={job} settings={settings} />
+                  </div>
+                </td>
+              </tr>}
+            </Fragment>;
+          })}</tbody>}
         </table>
       </div>}
       {!error && data?.jobs.length === 0 && <div className="console-inset rounded py-4 px-3 text-center">

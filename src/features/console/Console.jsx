@@ -18,17 +18,15 @@ function settingsFromCookies() {
   const value = (key, fallback) => Number(legacyCookie(key)) || fallback;
   return {
     pause: value('tubePauseSeconds', defaultSettings.pause),
-    interval: Math.max(100, value('autoRefreshTimeoutMs', defaultSettings.interval)),
-    auto: legacyCookie('isEnabledAutoRefreshLoad') === '1',
     searchLimit: Math.min(100, Math.max(1, value('searchResultLimit', defaultSettings.searchLimit))),
     json: legacyCookie('isDisabledJsonDecode') !== '1',
-    unserialize: legacyCookie('isDisabledUnserialization') !== '1',
     base64: legacyCookie('isEnabledBase64Decode') === '1',
     highlight: legacyCookie('isDisabledJobDataHighlight') !== '1',
   };
 }
 const autoRefreshParam = 'auto_refresh';
 const autoRefreshPreference = 'auto-refresh';
+const autoRefreshInterval = 500;
 
 function readAutoRefresh(params) {
   const value = params.get(autoRefreshParam)?.toLowerCase();
@@ -90,10 +88,15 @@ const fontSizeChoices = [
   { value: 'large', label: 'Large' },
 ];
 
+const refreshChoices = [
+  { value: 'off', label: 'Off' },
+  { value: 'on', label: 'On' },
+];
+
 function AppearanceOptions({ legend, name, choices, selected, onChange }) {
   return <fieldset className="theme-switcher">
     <legend>{legend}</legend>
-    <div className="theme-options">
+    <div className="theme-options" style={{ '--option-count': choices.length }}>
       {choices.map(({ value, label, icon }) => <label key={value}>
         <input type="radio" name={name} className="btn-check" value={value}
           checked={selected === value} onChange={() => onChange(value)} />
@@ -103,10 +106,12 @@ function AppearanceOptions({ legend, name, choices, selected, onChange }) {
   </fieldset>;
 }
 
-function AppearanceSettings({ theme, fontSize, changeTheme, changeFontSize }) {
+function QuickSettings({ theme, fontSize, changeTheme, changeFontSize, refresh, changeRefresh }) {
   return <li className="theme-menu-item" onClick={event => event.stopPropagation()}>
     <AppearanceOptions legend="Appearance" name="console-theme" choices={themeChoices} selected={theme} onChange={changeTheme} />
     <AppearanceOptions legend="Font size" name="console-font-size" choices={fontSizeChoices} selected={fontSize} onChange={changeFontSize} />
+    {changeRefresh && <AppearanceOptions legend="Auto-refresh" name="console-auto-refresh" choices={refreshChoices}
+      selected={refresh ? 'on' : 'off'} onChange={value => changeRefresh(value === 'on')} />}
   </li>;
 }
 
@@ -128,7 +133,7 @@ function SignOutAction({ onSignOut }) {
   </li>;
 }
 
-function Navigation({ servers, server, tubes, tube, loadingServers, loadingTubes, serversError, tubesError, query, state, samplesPage, onSearch, onAction, refresh, toggleRefresh, onColumns, searchLimit, appearance, onSignOut }) {
+function Navigation({ servers, server, tubes, tube, loadingServers, loadingTubes, serversError, tubesError, query, state, samplesPage, onSearch, onAction, refresh, changeRefresh, onColumns, searchLimit, appearance, onSignOut }) {
   const [expanded, setExpanded] = useState(false);
   const availableServers = server && !servers.some(item => item.id === server.id) ? [...servers, server] : servers;
   const serverOptions = [{ id: '', label: 'All servers', href: './?' }, ...availableServers.map(item => ({
@@ -151,32 +156,33 @@ function Navigation({ servers, server, tubes, tube, loadingServers, loadingTubes
           {server && <li className="nav-item"><NavigationPicker key={server.id} title="tubes" icon="tube" options={tubeOptions}
             selected={tube || ''} loading={loadingTubes} unavailable={Boolean(tubesError)} /></li>}
         </ul>
-        {server && tube && <form key={server.id + ':' + tube + ':' + query} className="tube-job-search mb-2 mb-lg-0 me-lg-1" role="search" aria-label="Search jobs in this tube" action="./" method="get" onSubmit={onSearch}>
-          <input type="hidden" name="server" value={server.endpoint} /><input type="hidden" name="tube" value={tube} />
-          <input type="hidden" name="state" value={state} /><input type="hidden" name="action" value="search" />
-          <input type="hidden" name="limit" value={searchLimit} />
-          <div className="input-group input-group-sm">
-            <input type="search" className="form-control" name="searchStr" placeholder="Search jobs in this tube" aria-label="Search jobs in this tube" defaultValue={query} maxLength={1000} required />
-            <button type="submit" className={neutral} aria-label="Search jobs" title="Search jobs"><Icon name="search" /></button>
+        <div className="console-header-actions">
+          {server && tube && <form key={server.id + ':' + tube + ':' + query} className="tube-job-search" role="search" aria-label="Search jobs in this tube" action="./" method="get" onSubmit={onSearch}>
+            <input type="hidden" name="server" value={server.endpoint} /><input type="hidden" name="tube" value={tube} />
+            <input type="hidden" name="state" value={state} /><input type="hidden" name="action" value="search" />
+            <input type="hidden" name="limit" value={searchLimit} />
+            <div className="input-group input-group-sm">
+              <input type="search" className="form-control" name="searchStr" placeholder="Search jobs" aria-label="Search jobs in this tube" defaultValue={query} maxLength={1000} required />
+              <button type="submit" className="btn btn-sm console-icon-button console-header-search-button" aria-label="Search jobs" title="Search jobs"><Icon name="search" weight="regular" /></button>
+            </div>
+          </form>}
+          <div className="console-header-controls" role="group" aria-label="Console controls">
+            <Menu button="btn btn-sm console-settings-button" end title="Settings" label={<>
+              <Icon name="settings" weight="regular" />
+              <span>Settings</span>
+              <Icon name="caretDown" className="console-settings-caret" />
+            </>}>
+              {!samplesPage && <Item onClick={onColumns}>Filter columns</Item>}
+              <Item href="./?action=manageSamples">Manage samples</Item>
+              <Divider />
+              <Item newTab href="https://github.com/beanstalkd/beanstalkd">Beanstalk (github) <Icon name="externalLink" /></Item>
+              <Item newTab href="https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt">Protocol Specification <Icon name="externalLink" /></Item>
+              <Divider /><Item onClick={() => onAction({ type: 'settings' })}>Edit settings</Item>
+              <Divider /><QuickSettings {...appearance} refresh={refresh} changeRefresh={samplesPage ? null : changeRefresh} />
+              {onSignOut && <><Divider /><SignOutAction onSignOut={onSignOut} /></>}
+            </Menu>
           </div>
-        </form>}
-        <ul className="nav navbar-nav navbar-right align-items-lg-center gap-lg-1">
-          <li className="nav-item"><Menu button="nav-link console-settings-button" end title="Settings" label={<>
-            <Icon name="settings" className="d-none d-sm-block" weight="regular" />
-            <span className="d-block d-sm-none text-start">Settings <span className="float-end pe-2"><Icon name="settings" weight="regular" /></span></span>
-          </>}>
-            {!samplesPage && <Item onClick={onColumns}>Filter columns</Item>}
-            <Item href="./?action=manageSamples">Manage samples</Item>
-            <Divider />
-            <Item newTab href="https://github.com/beanstalkd/beanstalkd">Beanstalk (github) <Icon name="externalLink" /></Item>
-            <Item newTab href="https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt">Protocol Specification <Icon name="externalLink" /></Item>
-            <Divider /><Item onClick={() => onAction({ type: 'settings' })}>Edit settings</Item>
-            <Divider /><AppearanceSettings {...appearance} />
-            {onSignOut && <><Divider /><SignOutAction onSignOut={onSignOut} /></>}
-          </Menu></li>
-          {!samplesPage && <li className="nav-item d-flex justify-content-end"><button id={server ? 'autoRefresh' : 'autoRefreshSummary'} type="button" className={'btn btn-sm mt-lg-0 console-icon-button ' + (refresh ? 'btn-success' : 'console-neutral')}
-            aria-label="Toggle auto refresh" aria-pressed={refresh} title="Toggle auto refresh" onClick={toggleRefresh}><Icon name="refresh" weight="regular" /></button></li>}
-        </ul>
+        </div>
       </div>
     </div>
   </nav>;
@@ -195,7 +201,7 @@ export default function Console({ appearance, onSignOut }) {
   const [settings, setSettings] = useState(() => ({ ...settingsFromCookies(), ...preference('settings', {}) }));
   const [refreshChoice, setRefreshChoice] = useState(() =>
     readAutoRefresh(params) ?? preference(autoRefreshPreference, null));
-  const refresh = refreshChoice ?? settings.auto;
+  const refresh = refreshChoice ?? false;
   const [visibleServerFields, setServerFields] = useState(() => preference('server-columns', legacyCookie('filter')?.split(',') || defaultServerFields));
   const [visibleTubeFields, setTubeFields] = useState(() => preference('tube-columns', legacyCookie('tubefilter')?.split(',') || tubeFields.slice(0, 9)));
   const [revision, setRevision] = useState(0);
@@ -219,7 +225,7 @@ export default function Console({ appearance, onSignOut }) {
     revision,
   );
   const server = listedServer || sharedLink.data;
-  const polling = refresh && !samplesPage ? settings.interval : 0;
+  const polling = refresh && !samplesPage ? autoRefreshInterval : 0;
   const overviewUrl = server ? queueURL(server, 'overview') : null;
   const overview = useResource(overviewUrl, revision, tube ? 0 : polling);
   const overviewError = overview.error;
@@ -372,8 +378,7 @@ export default function Console({ appearance, onSignOut }) {
     setPageURL(url);
   }
 
-  function toggleRefresh() {
-    const next = !refresh;
+  function changeRefresh(next) {
     setRefreshChoice(next);
     setParam(autoRefreshParam, String(next));
   }
@@ -555,8 +560,8 @@ export default function Console({ appearance, onSignOut }) {
       let message;
       switch (dialog.type) {
         case 'settings': {
-          const next = { pause: number('tubePauseSeconds'), interval: number('autoRefreshTimeoutMs'), auto: form.has('isEnabledAutoRefreshLoad'),
-            searchLimit: number('searchResultLimit'), json: form.has('json'), base64: form.has('base64'), unserialize: form.has('unserialize'), highlight: form.has('highlight') };
+          const next = { pause: number('tubePauseSeconds'),
+            searchLimit: number('searchResultLimit'), json: form.has('json'), base64: form.has('base64'), highlight: form.has('highlight') };
           savePreference('settings', next); setSettings(next); break;
         }
         case 'columns': {
@@ -665,7 +670,7 @@ export default function Console({ appearance, onSignOut }) {
   return <div onClick={followLink}>
     <Toaster theme={appearance.resolvedTheme} />
     <div className="container-fluid">
-      <Navigation {...{ servers, server, tubes, tube, loadingServers, loadingTubes, query, samplesPage, onAction: startDialog, refresh, toggleRefresh, searchLimit: settings.searchLimit }}
+      <Navigation {...{ servers, server, tubes, tube, loadingServers, loadingTubes, query, samplesPage, onAction: startDialog, refresh, changeRefresh, searchLimit: settings.searchLimit }}
         serversError={serversResource.error} tubesError={overview.error}
         state={params.get('state') || ''} onSearch={submitSearch} appearance={appearance} onSignOut={onSignOut}
         onColumns={() => startDialog({ type: 'columns', tubeColumns: Boolean(server), fields: server ? tubeFields : serverFields, visible: server ? visibleTubeFields : visibleServerFields })} />
@@ -689,14 +694,14 @@ export default function Console({ appearance, onSignOut }) {
             </div>
             <TubeTable tubes={filtered} fields={visibleTubeFields} server={server} selected={selected} onSelect={select} previous={overview.previousData?.tubes} loading={loadingTubes}
               bulk={<BulkControls selected={active} allTubes={tubes} visibleTubes={filtered} run={run} />} />
-          </> : detail.data ? <>
-            <TubeTable tubes={[detail.data.stats]} fields={visibleTubeFields} detail />
-            {query ? <SearchResults {...{ server, tube, query, results: search, settings, onAction: startDialog, next: scanNext, retry: reload }} />
-              : <TubeJobs key={server.id + ':' + tube} detail={detail.data} {...{ server, tube, samples: samples.data, onAction: startDialog, onCopy: copy, settings, run }} />}
-          </> : loadingDetail ? <>
-            <span className="visually-hidden" role="status">Loading tube details…</span>
-            <TubeTable fields={visibleTubeFields} detail loading />
-            {!query && <TubeJobsSkeleton />}
+          </> : detail.data || loadingDetail ? <>
+            {loadingDetail && !query && <span className="visually-hidden" role="status">Loading tube details…</span>}
+            <TubeTable tubes={detail.data ? [detail.data.stats] : []} fields={visibleTubeFields} detail loading={loadingDetail} />
+            {query ? <SearchResults server={server || { endpoint: serverKey }}
+              {...{ tube, query, results: search, settings, onAction: startDialog, next: scanNext, retry: reload }} />
+              : detail.data ? <TubeJobs key={server.id + ':' + tube} detail={detail.data}
+                {...{ server, tube, samples: samples.data, onAction: startDialog, onCopy: copy, settings, run }} />
+                : <TubeJobsSkeleton />}
           </> : detail.error && <div className="mt-3"><p>{`Tube "${tube}" not found or it is empty`}</p><a href={locationFor(server)}>&lt;&lt; back</a></div>}
       </div>
     </div>

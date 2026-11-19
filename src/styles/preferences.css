@@ -40,7 +40,7 @@
 .console-server-address,
 .console-settings-grid { display: grid; gap: .65rem; }
 .console-server-address { grid-template-columns: minmax(0, 1fr) 7rem; }
-.console-settings-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.console-settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 .console-field-hint {
   display: block;
@@ -62,7 +62,11 @@
 }
 
 .console-settings-section .console-field-hint { margin-top: -.4rem; }
-.console-settings-switches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+.console-settings-switches {
+  overflow: hidden;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+}
 
 .console-settings-switch,
 .console-column-option {
@@ -79,6 +83,8 @@
 }
 
 .console-settings-switch { justify-content: space-between; padding-inline-start: .65rem; }
+.console-settings-switches .console-settings-switch { border-radius: 0; }
+.console-settings-switches .console-settings-switch + .console-settings-switch { border-top: 1px solid var(--bs-border-color); }
 .console-settings-switch .form-check-input,
 .console-column-option .form-check-input { float: none; flex-shrink: 0; margin: 0; cursor: pointer; }
 
@@ -185,6 +191,6 @@
 }
 
 @media (max-width: 419px) {
-  .console-settings-grid, .console-settings-switches { grid-template-columns: minmax(0, 1fr); }
+  .console-settings-grid { grid-template-columns: minmax(0, 1fr); }
   .console-server-address { grid-template-columns: minmax(0, 1fr) 5.5rem; }
 }
