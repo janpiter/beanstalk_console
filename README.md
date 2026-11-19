@@ -58,9 +58,11 @@ Compose, apply changes with `docker compose up -d web`.
 | `SHARED_SERVERS_STORAGE` | Path to the shared-link server registry. Defaults to `shared-servers.json` alongside the sample data file. Use a single console instance for writes. |
 | `SAMPLE_STORAGE` | Path to the writable sample data file. Defaults to the checkout's `storage.json`. Its parent directory must be writable so the console can replace the file atomically. |
 
-The console creates each storage file on its first write. The parent directory
-must already exist and be writable. Keep these files in persistent storage if
-you want to retain samples and shared server links across deployments.
+The console creates each storage file on its first write. Browser server lists
+are stored in a `browser-servers/` directory alongside the sample file. Its
+parent must already exist and be writable. Keep the directory and the storage
+files on persistent storage to retain lists, samples, and shared links across
+deployments.
 
 ## Docker Compose
 
@@ -124,6 +126,10 @@ belongs to the current browser. Removing an entry from that list leaves existing
 shared links usable. Older personal entries can be registered by saving them in
 **Edit Server** once. Recipients need access to the console's HTTP address and
 its configured authentication.
+
+On the first change to a browser's list, the console migrates entries and hidden
+servers from its old cookie into server storage. **All servers** shows 25 entries
+per page and only requests stats for the current page.
 
 On a direct loopback connection or a console with personal
 server access enabled, `server=host:port` can also open an address that is

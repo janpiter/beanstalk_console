@@ -239,15 +239,37 @@ function ServerRow({ server, fields, revision, interval, onAction, personalEnabl
 }
 
 export function ServerSummary({ servers, fields, revision, interval, onAction, personalEnabled, loading }) {
+  const [filter, setFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+  const query = filter.trim().toLowerCase();
+  const matches = servers.filter(server => server.label.toLowerCase().includes(query) || server.endpoint.includes(query));
+  const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const start = (currentPage - 1) * pageSize;
+  const visible = matches.slice(start, start + pageSize);
   return <div className="row"><div className="col-md-12 col-12 mt-4"><div className="card bg-body border-0 shadow-sm">
     <div className="card-body">
       {loading && <span className="visually-hidden" role="status">Loading servers…</span>}
+      {(servers.length > pageSize || filter) && <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <input type="search" className="form-control form-control-sm w-auto mw-100" aria-label="Filter servers"
+          placeholder="Filter servers" value={filter} onChange={event => { setFilter(event.target.value); setPage(1); }} />
+        <small className="text-body-secondary" role="status">{matches.length} of {servers.length} servers</small>
+      </div>}
       <div className="table-responsive"><table className="table table-striped border-dark-subtle align-middle mb-0" id="servers-index" aria-busy={loading || undefined}>
       <thead><tr><th>Name</th>{fields.map(field => <th key={field} scope="col">{nameOf(field)}</th>)}<th>&nbsp;</th></tr></thead>
       <tbody>{loading ? Array.from({ length: 3 }, (_, row) => <SkeletonRow key={row} fields={fields} actions />)
-        : servers.map(server => <ServerRow key={server.id} {...{ server, fields, revision, interval, onAction, personalEnabled }} />)}</tbody>
+        : visible.length ? visible.map(server => <ServerRow key={server.id} {...{ server, fields, revision, interval, onAction, personalEnabled }} />)
+          : query && <tr><td colSpan={fields.length + 2} className="text-body-secondary text-center py-3">No matching servers</td></tr>}</tbody>
     </table></div></div>
-    <div className="card-body pt-1 text-end"><button type="button" className={success} id="addServer" onClick={() => onAction({ type: 'server' })} disabled={!personalEnabled} title={!loading && !personalEnabled ? 'Personal servers are disabled' : undefined}>Add server</button></div>
+    <div className="card-body pt-1 d-flex flex-wrap align-items-center justify-content-end gap-2">
+      {pageCount > 1 && <nav className="d-flex align-items-center gap-2 me-auto" aria-label="Server list pages">
+        <button type="button" className={neutral} disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>
+        <small className="text-body-secondary" role="status">Page {currentPage} of {pageCount}</small>
+        <button type="button" className={neutral} disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>Next</button>
+      </nav>}
+      <button type="button" className={success} id="addServer" onClick={() => onAction({ type: 'server' })} disabled={!personalEnabled} title={!loading && !personalEnabled ? 'Personal servers are disabled' : undefined}>Add server</button>
+    </div>
   </div></div></div>;
 }
 

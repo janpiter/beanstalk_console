@@ -4,6 +4,7 @@ import express from 'express';
 import { tubePattern, withQueue } from './beanstalk.js';
 import { sampleStore } from './samples.js';
 import { sharedServerStore } from './shared-servers.js';
+import { browserServerStore } from './browser-servers.js';
 import { legacyActions } from './legacy.js';
 import { consoleAuth } from './auth.js';
 import { applyTubeAction, jobView, searchJobs, states } from './operations.js';
@@ -14,7 +15,7 @@ const maximumId = 18446744073709551615n;
 const maxUint = 4294967295;
 const loopbackHosts = new Set(['localhost', '127.0.0.1', '::1']);
 const loopbackPeers = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
-const maxPersonalServers = 8;
+const browserServerCookie = 'console_server_list';
 const digest = value => createHash('sha256').update(value).digest();
 
 function fail(status, message) {
@@ -85,6 +86,8 @@ export function createApp(env = process.env) {
   const samples = sampleStore(samplePath);
   const sharedServers = sharedServerStore(resolve(env.SHARED_SERVERS_STORAGE || join(dirname(samplePath), 'shared-servers.json')));
 
+  const browserServers = browserServerStore(join(dirname(samplePath), 'browser-servers'));
+
   function canManage(request) {
     if (personalEnabled) return true;
     if (!localManagement || !loopbackPeers.has(request.socket.remoteAddress) ||
@@ -93,45 +96,54 @@ export function createApp(env = process.env) {
     return /^((localhost|127\.0\.0\.1)|\[::1\])(:[0-9]+)?$/i.test(host);
   }
 
-  function preferences(request) {
+  function legacyPreferences(cookies) {
+    try {
+      const current = cookies.get('console_servers');
+      return current !== undefined ? JSON.parse(decodeURIComponent(current))
+        : decodeURIComponent(cookies.get('beansServers') || '').split(';').filter(Boolean);
+    } catch {
+      return null;
+    }
+  }
+
+  function parsePreferences(document) {
     const entries = new Map();
     const hidden = new Set();
-    if (!canManage(request)) return { entries, hidden };
-    try {
-      const cookies = decodeCookies(request);
-      const current = cookies.get('console_servers');
-      const document = current !== undefined ? JSON.parse(decodeURIComponent(current))
-        : decodeURIComponent(cookies.get('beansServers') || '').split(';').filter(Boolean);
-      const values = Array.isArray(document) ? document : document?.entries;
-      if (Array.isArray(document?.hidden)) {
-        for (const id of document.hidden) if (configured.has(id)) hidden.add(id);
+    const values = Array.isArray(document) ? document : document?.entries;
+    if (Array.isArray(document?.hidden)) {
+      for (const id of document.hidden) if (configured.has(id)) hidden.add(id);
+    }
+    if (Array.isArray(values)) {
+      for (const value of values) {
+        try {
+          const address = typeof value === 'string' ? value : value.address;
+          const label = typeof value?.label === 'string' ? value.label.slice(0, 100) : undefined;
+          const server = serverEntry(address, label);
+          entries.set(server.id, server);
+          hidden.delete(server.id);
+        } catch { /* Ignore invalid entries from older browser data. */ }
       }
-      if (Array.isArray(values)) {
-        for (const value of values.slice(0, maxPersonalServers)) {
-          try {
-            const address = typeof value === 'string' ? value : value.address;
-            const label = typeof value?.label === 'string' ? value.label.slice(0, 100) : undefined;
-            const server = serverEntry(address, label);
-            entries.set(server.id, server);
-            hidden.delete(server.id);
-          } catch { /* Ignore malformed entries from an older browser cookie. */ }
-        }
-      }
-    } catch { /* Use the configured defaults when the cookie cannot be read. */ }
+    }
     return { entries, hidden };
   }
 
-  function serversFor(request) {
-    const { entries, hidden } = preferences(request);
+  function visibleServers({ entries, hidden }) {
     const list = new Map([...configured].filter(([id]) => !hidden.has(id)));
     for (const [id, server] of entries) list.set(id, server);
-    return [...list.values()];
+    return list;
+  }
+
+  async function serversFor(request) {
+    if (!canManage(request)) return [...configured.values()];
+    const cookies = decodeCookies(request);
+    const stored = await browserServers.read(cookies.get(browserServerCookie));
+    return [...visibleServers(parsePreferences(stored ?? legacyPreferences(cookies))).values()];
   }
 
   async function resolveServer(request, key) {
     if (typeof key !== 'string') return undefined;
     const matches = entry => [entry.id, entry.endpoint, 'beanstalk://' + entry.endpoint].includes(key);
-    const browserServer = serversFor(request).find(matches);
+    const browserServer = (await serversFor(request)).find(matches);
     if (browserServer) return browserServer;
 
     const configuredServer = [...configured.values()].find(matches);
@@ -155,20 +167,22 @@ export function createApp(env = process.env) {
     return { id, label, endpoint, host, port, personal: !configured.has(id), ...(direct && { direct }) };
   }
 
-  async function storePreferences(response, { entries, hidden }, server) {
-    if (entries.size > maxPersonalServers) fail(400, 'Limit of eight browser server entries reached');
-    const value = JSON.stringify({
-      entries: [...entries.values()].map(server => ({
-        address: server.endpoint, ...(server.label !== server.endpoint && { label: server.label }),
-      })),
-      hidden: [...hidden],
+  async function updatePreferences(request, response, change, server) {
+    const cookies = decodeCookies(request);
+    const id = await browserServers.update(cookies.get(browserServerCookie), async stored => {
+      const list = parsePreferences(stored ?? legacyPreferences(cookies));
+      change(list, visibleServers(list));
+      if (server && !configured.has(server.id)) await sharedServers.save(server);
+      return {
+        entries: [...list.entries.values()].map(({ endpoint, label }) => ({ address: endpoint, label })),
+        hidden: [...list.hidden],
+      };
     });
-    if (encodeURIComponent(value).length > 3700) fail(400, 'The browser server list is too large');
-    if (server && !configured.has(server.id)) await sharedServers.save(server);
-    response.cookie('console_servers', value, {
+    response.cookie(browserServerCookie, id, {
       httpOnly: true, sameSite: 'strict', secure: env.CONSOLE_SECURE_COOKIES === 'true',
       maxAge: 365 * 24 * 60 * 60 * 1000,
     });
+    if (cookies.has('console_servers')) response.clearCookie('console_servers');
   }
 
   function readServer(body) {
@@ -222,8 +236,8 @@ export function createApp(env = process.env) {
     next();
   });
   api.use(express.json({ limit: '32mb' }));
-  api.get('/servers', (request, response) => {
-    response.json({ servers: serversFor(request).map(publicServer), personalEnabled: canManage(request) });
+  api.get('/servers', async (request, response) => {
+    response.json({ servers: (await serversFor(request)).map(publicServer), personalEnabled: canManage(request) });
   });
   api.get('/server-link', async (request, response) => {
     const server = await resolveServer(request, request.query.server);
@@ -233,32 +247,31 @@ export function createApp(env = process.env) {
   api.post('/servers', async (request, response) => {
     if (!canManage(request)) fail(403, 'Server management is disabled');
     const server = readServer(request.body);
-    const list = preferences(request);
-    if (serversFor(request).some(entry => entry.id === server.id)) fail(409, 'This server is already in the list');
-    addPreference(list, server, request.body.label);
-    await storePreferences(response, list, server);
+    await updatePreferences(request, response, (list, current) => {
+      if (current.has(server.id)) fail(409, 'This server is already in the list');
+      addPreference(list, server, request.body.label);
+    }, server);
     response.status(201).json({ id: server.id });
   });
   api.put('/servers/:serverId', async (request, response) => {
     if (!canManage(request)) fail(403, 'Server management is disabled');
     const id = request.params.serverId;
-    const current = serversFor(request);
-    if (!current.some(entry => entry.id === id)) fail(404, 'Server is not in the browser list');
     const server = readServer(request.body);
-    if (server.id !== id && current.some(entry => entry.id === server.id)) fail(409, 'This server is already in the list');
-    const list = preferences(request);
-    if (server.id !== id) removePreference(list, id);
-    addPreference(list, server, request.body.label);
-    await storePreferences(response, list, server);
+    await updatePreferences(request, response, (list, current) => {
+      if (!current.has(id)) fail(404, 'Server is not in the browser list');
+      if (server.id !== id && current.has(server.id)) fail(409, 'This server is already in the list');
+      if (server.id !== id) removePreference(list, id);
+      addPreference(list, server, request.body.label);
+    }, server);
     response.json({ id: server.id });
   });
   api.delete('/servers/:serverId', async (request, response) => {
     if (!canManage(request)) fail(403, 'Server management is disabled');
     const id = request.params.serverId;
-    if (!serversFor(request).some(entry => entry.id === id)) fail(404, 'Server is not in the browser list');
-    const list = preferences(request);
-    removePreference(list, id);
-    await storePreferences(response, list);
+    await updatePreferences(request, response, (list, current) => {
+      if (!current.has(id)) fail(404, 'Server is not in the browser list');
+      removePreference(list, id);
+    });
     response.status(204).end();
   });
   api.param('serverId', async (request, _response, next, id) => {

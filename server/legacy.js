@@ -20,7 +20,7 @@ export function legacyActions({ api, serversFor, resolveServer, samples }) {
       return response.status(403).json({ error: 'Cross-site request denied' });
     }
     const body = request.body || {};
-    const servers = serversFor(request);
+    const servers = await serversFor(request);
     const target = value => servers.find(item => [item.endpoint, item.id, 'beanstalk://' + item.endpoint].includes(value));
     const targetServer = server ? await resolveServer(request, server) : undefined;
     const queue = (...parts) => route('servers', targetServer?.direct ? targetServer.endpoint : targetServer?.id || '', ...parts);

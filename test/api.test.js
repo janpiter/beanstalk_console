@@ -147,6 +147,29 @@ test('adds, edits, hides, and restores browser servers on a direct loopback conn
   assert.equal((await legacy('/beanstalk/?action=serversRemove&removeServer=127.0.0.1%3A11303', {}, oldCookie)).status, 204);
 });
 
+test('migrates server preferences and keeps large lists out of cookies', async t => {
+  const { call } = await fixture(t);
+  const { servers: [defaultServer] } = (await call('/servers')).data;
+  const oldList = {
+    entries: Array.from({ length: 8 }, (_, index) => ({ address: 'legacy-' + index, label: 'Legacy ' + index })),
+    hidden: [defaultServer.id],
+  };
+  const oldBrowser = { Cookie: 'console_servers=' + encodeURIComponent(JSON.stringify(oldList)) };
+  const add = await call('/servers', 'POST', { address: 'extra-0' }, oldBrowser);
+  assert.equal(add.status, 201);
+  const cookie = add.headers.get('set-cookie').split(';')[0];
+  assert.match(cookie, /^console_server_list=[0-9a-f-]{36}$/);
+  const browser = { Cookie: cookie };
+  const more = await Promise.all(Array.from({ length: 12 }, (_, index) => call('/servers', 'POST', {
+    address: 'extra-' + (index + 1), label: '測'.repeat(100),
+  }, browser)));
+  assert.ok(more.every(result => result.status === 201));
+  const { servers } = (await call('/servers', 'GET', undefined, browser)).data;
+  assert.equal(servers.length, 21);
+  assert.equal(servers[0].label, 'Legacy 0');
+  assert.deepEqual((await call('/servers')).data.servers, [defaultServer]);
+});
+
 test('reads fragmented TCP frames and preserves binary delimiters in a job payload', async t => {
   const payload = Buffer.from([0xff, 0x0d, 0x0a, 0, 0xfe]);
   const server = createServer(socket => {

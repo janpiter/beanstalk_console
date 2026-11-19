@@ -12,6 +12,8 @@ LICENSE.md
 README.md
 
 storage.json
+shared-servers.json
+browser-servers/
 
 /vendor
 nbproject/
