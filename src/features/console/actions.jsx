@@ -1,11 +1,36 @@
-import { useState } from 'react';
-import { Alert, nameOf, success } from '../../components/console-ui.jsx';
+import { useRef, useState } from 'react';
+import { Alert, nameOf, neutral, success } from '../../components/console-ui.jsx';
 import { ColumnFilter } from '../../components/column-filter.jsx';
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/dialog.jsx';
 import { PayloadEditor } from '../../components/payload.jsx';
 
 const defaults = { pause: -1, interval: 500, auto: false, searchLimit: 25, json: true, unserialize: true, base64: false, highlight: true };
 export { defaults as defaultSettings };
+
+export function CopyPayloadDialog({ payload, close, returnFocus }) {
+  const field = useRef(null);
+  function selectPayload() {
+    field.current.focus({ preventScroll: true });
+    field.current.select();
+  }
+
+  return <Dialog open onOpenChange={open => { if (!open) close(); }}>
+    <DialogContent dismissible returnFocus={returnFocus}>
+      <div className="console-dialog-form">
+        <DialogHeader><DialogTitle>Copy job data</DialogTitle></DialogHeader>
+        <div className="console-dialog-body">
+          <p>Automatic copy is unavailable. Select the data, then press <kbd>Ctrl+C</kbd> or <kbd>⌘C</kbd> to copy.</p>
+          <textarea ref={field} aria-label="Job data" className="form-control font-monospace payload-editor-input"
+            rows={8} readOnly spellCheck={false} value={payload} />
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><button type="button" className={neutral}>Close</button></DialogClose>
+          <button type="button" className={success} onClick={selectPayload}>Select all</button>
+        </DialogFooter>
+      </div>
+    </DialogContent>
+  </Dialog>;
+}
 
 function titleFor(action) {
   switch (action.type) {

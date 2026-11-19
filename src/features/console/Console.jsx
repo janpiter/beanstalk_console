@@ -7,9 +7,10 @@ import {
 import { Icon } from '../../components/icon.jsx';
 import { NavigationPicker } from '../../components/navigation-picker.jsx';
 import { Toaster } from '../../components/sonner.jsx';
-import { ActionDialog, defaultSettings } from './actions.jsx';
+import { ActionDialog, CopyPayloadDialog, defaultSettings } from './actions.jsx';
 import { BulkControls, SampleEditor, Samples, SearchResults, TubeJobs, TubeJobsSkeleton } from './jobs.jsx';
 import { endpoint, request, useResource } from '../../lib/api.js';
+import { copyText } from '../../lib/clipboard.js';
 
 function settingsFromCookies() {
   const value = (key, fallback) => Number(legacyCookie(key)) || fallback;
@@ -377,10 +378,12 @@ export default function Console({ appearance, onSignOut }) {
   function filterTubes(value) { setFilter(value); setParam('filter', value.trim() ? value : ''); }
   function scanNext(value) { setParam('from', value); }
   async function copy(value) {
-    try {
-      await navigator.clipboard.writeText(value);
+    const version = pageVersion.current;
+    if (await copyText(value)) {
       toast.success('Job data copied to clipboard');
-    } catch { toast.error('Clipboard unavailable'); }
+    } else if (pageVersion.current === version) {
+      startDialog({ type: 'copyPayload', payload: value });
+    }
   }
 
   useEffect(() => {
@@ -660,6 +663,8 @@ export default function Console({ appearance, onSignOut }) {
     {scrolled && <div className="scroll-top position-fixed bottom-0 end-0 me-4 mb-3 pe-3" title="Scroll to top">
       <button type="button" className="btn btn-sm text-white btn-success rounded-circle console-icon-button" aria-label="Scroll to top" onClick={() => window.scrollTo({ top: 0 })}><Icon name="scrollUp" /></button>
     </div>}
-    {dialog && <ActionDialog action={dialog} close={closeDialog} returnFocus={dialogFocus.current} {...{ submit, settings, tubes, busy, error }} />}
+    {dialog?.type === 'copyPayload'
+      ? <CopyPayloadDialog payload={dialog.payload} close={closeDialog} returnFocus={dialogFocus.current} />
+      : dialog && <ActionDialog action={dialog} close={closeDialog} returnFocus={dialogFocus.current} {...{ submit, settings, tubes, busy, error }} />}
   </div>;
 }
