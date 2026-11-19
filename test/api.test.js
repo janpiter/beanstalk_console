@@ -190,6 +190,72 @@ test('reads fragmented TCP frames and preserves binary delimiters in a job paylo
   });
 });
 
+test('runs detail and list deletions together with three slots per server and skips overlapping tubes', async t => {
+  const parked = new Map();
+  const peeked = [];
+  const deleted = [];
+  const tubes = ['detail', 'first', 'second', 'waiting'];
+  const queue = createServer(socket => {
+    let tube;
+    socket.on('data', chunk => {
+      const [command, arg] = chunk.toString().trim().split(' ');
+      if (command === 'use') {
+        tube = arg;
+        socket.write('USING ' + tube + '\r\n');
+      } else if (command.startsWith('peek-')) {
+        peeked.push([tube, command]);
+        parked.set(tube, () => socket.write(`FOUND ${tubes.indexOf(tube) + 1} 1\r\nx\r\n`));
+      } else if (command === 'delete') {
+        deleted.push(tube);
+        socket.write('DELETED\r\n');
+      }
+    });
+  });
+  const port = await localServer(queue);
+  t.after(() => new Promise(resolve => queue.close(resolve)));
+  const endpoint = '127.0.0.1:' + port;
+  const { call } = await fixture(t, { BEANSTALK_SERVERS: 'Test=' + endpoint });
+  const { servers: [server] } = (await call('/servers')).data;
+  const root = '/servers/' + server.id;
+  const start = options => call(root + '/deletions', 'POST', { limit: 1, ...options });
+  const status = async operation => (await call(root + '/deletions/' + operation.id)).data.tubes;
+  async function waitFor(check) {
+    const deadline = Date.now() + 2000;
+    while (Date.now() < deadline) {
+      if (await check()) return;
+      await setTimeout(10);
+    }
+    assert.fail('Deletion did not reach the expected state');
+  }
+
+  const detail = await start({ tubes: ['detail'], state: 'buried', batched: true });
+  assert.equal(detail.status, 202);
+  await waitFor(() => parked.has('detail'));
+
+  const bulk = await start({ tubes, state: 'all' });
+  assert.equal(bulk.status, 202);
+  await waitFor(() => parked.has('first') && parked.has('second'));
+  assert.deepEqual((await status(bulk.data)).map(item => item.status), ['skipped', 'running', 'running', 'queued']);
+  assert.deepEqual([...peeked].sort(), [['detail', 'peek-buried'], ['first', 'peek-ready'], ['second', 'peek-ready']]);
+
+  const overlap = await call('/servers/' + encodeURIComponent(endpoint) + '/deletions', 'POST', {
+    tubes: ['waiting'], state: 'buried', limit: 1,
+  });
+  assert.equal(overlap.data.tubes[0].status, 'skipped');
+  const legacy = await call(root + '/tube-actions', 'POST', { action: 'clear', tubes: ['detail'], limit: 1 });
+  assert.match(legacy.data.results[0].error, /already has a queued or running deletion/);
+
+  parked.get('first')();
+  await waitFor(() => parked.has('waiting'));
+  assert.equal((await status(detail.data))[0].status, 'running');
+  for (const tube of ['detail', 'second', 'waiting']) parked.get(tube)();
+  await waitFor(async () => (await status(bulk.data)).slice(1).every(item => item.status === 'done') &&
+    (await status(detail.data))[0].status === 'done');
+  assert.deepEqual((await status(bulk.data)).map(item => item.affected), [0, 1, 1, 1]);
+  assert.equal((await status(detail.data))[0].affected, 1);
+  assert.deepEqual(deleted.sort(), [...tubes].sort());
+});
+
 test('manages jobs and tubes through the API against an isolated beanstalkd', { skip: !process.env.BEANSTALKD_BIN }, async t => {
   const listener = createServer();
   const port = await localServer(listener);

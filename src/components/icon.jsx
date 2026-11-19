@@ -1,9 +1,9 @@
 import {
   ArrowBendUpRightIcon, ArrowClockwiseIcon, ArrowLeftIcon, ArrowSquareOutIcon,
-  CaretDoubleUpIcon, CaretDownIcon, CaretUpIcon, CheckIcon, ClockIcon, ClockCounterClockwiseIcon,
+  CaretDoubleUpIcon, CaretDownIcon, CaretRightIcon, CaretUpIcon, CheckIcon, ClockIcon, ClockCounterClockwiseIcon,
   CompassIcon, CopyIcon, DotsThreeIcon, FastForwardIcon, FileTextIcon, FlameIcon, GearSixIcon, HardDriveIcon, InfoIcon, KeyIcon,
   ListIcon, ListChecksIcon, MagnifyingGlassIcon, MonitorIcon, MoonIcon, PauseIcon, PencilSimpleIcon, PlayIcon, PlusIcon,
-  PlusCircleIcon, PulseIcon, QueueIcon, SignOutIcon, SkipForwardIcon, SlidersIcon, SunIcon, TimerIcon,
+  PlusCircleIcon, PulseIcon, QueueIcon, SignOutIcon, SkipForwardIcon, SlidersHorizontalIcon, SlidersIcon, SunIcon, TimerIcon,
   TrashIcon, TrashSimpleIcon, WarningIcon, WarningCircleIcon, XIcon,
 } from '@phosphor-icons/react';
 
@@ -16,7 +16,9 @@ const icons = {
   server: HardDriveIcon,
   tube: QueueIcon,
   settings: GearSixIcon,
+  advancedSettings: SlidersHorizontalIcon,
   caretDown: CaretDownIcon,
+  caretRight: CaretRightIcon,
   signOut: SignOutIcon,
   externalLink: ArrowSquareOutIcon,
   refresh: ArrowClockwiseIcon,

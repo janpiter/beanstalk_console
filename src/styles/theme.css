@@ -814,39 +814,58 @@ body.page-all-tubes .navbar {
   padding: .3rem .7rem .55rem;
 }
 
-.console-sign-out-footer {
-  margin-top: .15rem;
-  padding: .45rem .7rem .35rem;
+.theme-menu-heading {
+  font-size: .875rem;
+  font-weight: 700;
+  margin-bottom: .55rem;
 }
 
-.console-sign-out {
-  --bs-btn-color: var(--bs-secondary-color);
-  --bs-btn-bg: transparent;
-  --bs-btn-border-color: transparent;
-  --bs-btn-hover-color: var(--bs-dropdown-link-hover-color);
-  --bs-btn-hover-bg: var(--bs-dropdown-link-hover-bg);
-  --bs-btn-hover-border-color: transparent;
-  --bs-btn-active-color: var(--bs-dropdown-link-active-color);
-  --bs-btn-active-bg: var(--bs-dropdown-link-active-bg);
-  --bs-btn-active-border-color: transparent;
-  box-shadow: none;
+.console-refresh-option {
+  position: relative;
+  cursor: pointer;
 }
 
-.console-sign-out:focus-visible {
-  outline: 2px solid var(--console-focus);
-  outline-offset: 1px;
+.console-refresh-status { color: var(--bs-secondary-color); font-size: .8125rem; }
+.console-refresh-option:has(input:checked) .console-refresh-status { color: var(--console-accent-text); }
+
+.console-refresh-switch {
+  display: flex;
+  align-items: center;
+  width: 2rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  padding: .125rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius-pill);
+  background: var(--console-inset);
 }
+
+.console-refresh-switch::before {
+  content: '';
+  width: .75rem;
+  height: .75rem;
+  border-radius: 50%;
+  background: var(--bs-secondary-color);
+}
+
+.console-refresh-option input:checked + .console-refresh-switch {
+  justify-content: flex-end;
+  border-color: var(--console-focus);
+  background: var(--console-selected);
+}
+
+.console-refresh-option input:checked + .console-refresh-switch::before { background: var(--console-accent-text); }
 
 .theme-switcher legend {
-  margin-bottom: .4rem;
+  margin-bottom: .3rem;
   color: var(--bs-secondary-color);
   font-size: .8125rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .theme-options {
   display: grid;
-  grid-template-columns: repeat(var(--option-count, 3), 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: .2rem;
   padding: .2rem;
   border: 1px solid var(--bs-border-color);
@@ -877,7 +896,8 @@ body.page-all-tubes .navbar {
   color: var(--console-accent-text);
 }
 
-.theme-options input:focus-visible + span {
+.theme-options input:focus-visible + span,
+.console-refresh-option input:focus-visible + .console-refresh-switch {
   outline: 2px solid var(--console-focus);
   outline-offset: 1px;
 }

@@ -10,7 +10,6 @@ import { Toaster } from '../../components/sonner.jsx';
 import { ActionDialog, CopyPayloadDialog, defaultSettings } from './actions.jsx';
 import { BulkControls, SampleEditor, Samples, SearchResults, TubeJobs, TubeJobsSkeleton } from './jobs.jsx';
 import { endpoint, request, useResource } from '../../lib/api.js';
-import { clearJobsInBatches } from '../../lib/clear-jobs.js';
 import { copyText } from '../../lib/clipboard.js';
 import { sampleDestinations } from '../../lib/sample-destinations.js';
 
@@ -46,21 +45,32 @@ function carryAutoRefresh(url, enabled) {
 const postAction = (name, server, tube, params, data) =>
   request(actionLocation(server, tube, name, params), { method: 'POST', data });
 
-function notifyTubeResults(operation, results, toastId) {
+function notifyTubeResults(operation, results) {
   const failed = results.some(item => item.error || item.stopped === 'timeout');
-  const limited = operation === 'clear' && results.some(item => item.stopped === 'limit');
-  const notify = failed ? toast.error : limited ? toast.warning : toast.success;
-  notify(operation === 'clear' ? 'Job deletion results' : nameOf(operation) + ' results', {
-    id: toastId,
+  const notify = failed ? toast.error : toast.success;
+  notify(nameOf(operation) + ' results', {
     description: <ul className="console-toast-details mb-0 ps-3">
       {results.map(item => <li key={item.tube}>
-        {item.tube} · {item.affected} {operation === 'clear' ? 'deleted' : 'affected'}
+        {item.tube} · {item.affected} affected
         {item.error && ' · ' + item.error}
         {item.stopped && ' · stopped at ' + item.stopped}
         {item.pendingCopy && ' · destination job #' + item.pendingCopy.destinationId + ' created; source deletion unconfirmed'}
       </li>)}
     </ul>,
   });
+}
+
+function deletionProgress(operation) {
+  return <ul className="console-toast-details mb-0 ps-3">
+    {operation.tubes.map(({ tube, status, affected, stopped, error }) => <li key={tube}>
+      {tube} · {status === 'skipped' ? 'Already queued or running · skipped' : <>
+        {affected.toLocaleString()} / {operation.target.toLocaleString()} deleted
+        {status === 'queued' && ' · Queued'}
+        {status === 'failed' && (' · ' + (error || 'Stopped at timeout'))}
+        {status === 'done' && (stopped === 'limit' ? ' · Limit reached' : ' · No more matching jobs')}
+      </>}
+    </li>)}
+  </ul>;
 }
 
 function filterPattern(value) {
@@ -88,15 +98,10 @@ const fontSizeChoices = [
   { value: 'large', label: 'Large' },
 ];
 
-const refreshChoices = [
-  { value: 'off', label: 'Off' },
-  { value: 'on', label: 'On' },
-];
-
 function AppearanceOptions({ legend, name, choices, selected, onChange }) {
   return <fieldset className="theme-switcher">
     <legend>{legend}</legend>
-    <div className="theme-options" style={{ '--option-count': choices.length }}>
+    <div className="theme-options">
       {choices.map(({ value, label, icon }) => <label key={value}>
         <input type="radio" name={name} className="btn-check" value={value}
           checked={selected === value} onChange={() => onChange(value)} />
@@ -107,18 +112,31 @@ function AppearanceOptions({ legend, name, choices, selected, onChange }) {
 }
 
 function QuickSettings({ theme, fontSize, changeTheme, changeFontSize, refresh, changeRefresh }) {
-  return <li className="theme-menu-item" onClick={event => event.stopPropagation()}>
-    <AppearanceOptions legend="Appearance" name="console-theme" choices={themeChoices} selected={theme} onChange={changeTheme} />
-    <AppearanceOptions legend="Font size" name="console-font-size" choices={fontSizeChoices} selected={fontSize} onChange={changeFontSize} />
-    {changeRefresh && <AppearanceOptions legend="Auto-refresh" name="console-auto-refresh" choices={refreshChoices}
-      selected={refresh ? 'on' : 'off'} onChange={value => changeRefresh(value === 'on')} />}
-  </li>;
+  return <>
+    <li className="theme-menu-item" onClick={event => event.stopPropagation()}>
+      <fieldset>
+        <legend className="theme-menu-heading">Appearance</legend>
+        <AppearanceOptions legend="Theme" name="console-theme" choices={themeChoices} selected={theme} onChange={changeTheme} />
+        <AppearanceOptions legend="Font size" name="console-font-size" choices={fontSizeChoices} selected={fontSize} onChange={changeFontSize} />
+      </fieldset>
+    </li>
+    {changeRefresh && <><Divider /><li onClick={event => event.stopPropagation()}>
+      <label className="dropdown-item fs-14px console-refresh-option">
+        <Icon name="refresh" weight="regular" />
+        <span className="me-auto">Auto-refresh</span>
+        <span className="console-refresh-status" aria-hidden="true">{refresh ? 'On' : 'Off'}</span>
+        <input type="checkbox" role="switch" className="btn-check" checked={refresh}
+          onChange={event => changeRefresh(event.currentTarget.checked)} />
+        <span className="console-refresh-switch" aria-hidden="true" />
+      </label>
+    </li></>}
+  </>;
 }
 
 function SignOutAction({ onSignOut }) {
   const [busy, setBusy] = useState(false);
-  return <li className="console-sign-out-footer">
-    <button type="button" className={neutral + ' console-sign-out w-100 justify-content-start fw-semibold'}
+  return <li>
+    <button type="button" className="dropdown-item fs-14px"
       disabled={busy} aria-busy={busy} onClick={async event => {
         event.stopPropagation();
         setBusy(true);
@@ -128,7 +146,7 @@ function SignOutAction({ onSignOut }) {
           setBusy(false);
         }
       }}>
-      <Icon name="signOut" /> {busy ? 'Signing out…' : 'Sign out'}
+      <Icon name="signOut" weight="regular" /> {busy ? 'Signing out…' : 'Sign out'}
     </button>
   </li>;
 }
@@ -177,8 +195,11 @@ function Navigation({ servers, server, tubes, tube, loadingServers, loadingTubes
               <Divider />
               <Item newTab href="https://github.com/beanstalkd/beanstalkd">Beanstalk (github) <Icon name="externalLink" /></Item>
               <Item newTab href="https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt">Protocol Specification <Icon name="externalLink" /></Item>
-              <Divider /><Item onClick={() => onAction({ type: 'settings' })}>Edit settings</Item>
               <Divider /><QuickSettings {...appearance} refresh={refresh} changeRefresh={samplesPage ? null : changeRefresh} />
+              <Divider /><Item onClick={() => onAction({ type: 'settings' })}>
+                <Icon name="advancedSettings" weight="regular" /> <span className="me-auto">Advanced settings</span>
+                <Icon name="caretRight" />
+              </Item>
               {onSignOut && <><Divider /><SignOutAction onSignOut={onSignOut} /></>}
             </Menu>
           </div>
@@ -212,7 +233,6 @@ export default function Console({ appearance, onSignOut }) {
   const [busy, setBusy] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pending = useRef(false);
-  const clearingJobs = useRef(false);
   const openedLegacyAction = useRef(false);
   const currentURL = useRef(pageURL);
   const pageVersion = useRef(0);
@@ -273,17 +293,6 @@ export default function Console({ appearance, onSignOut }) {
     window.addEventListener('scroll', scroll, { passive: true });
     return () => window.removeEventListener('scroll', scroll);
   }, []);
-
-  useEffect(() => {
-    const bar = document.getElementById('tubeBulkActions');
-    document.body.classList.toggle('has-tube-bulk-actions', Boolean(bar));
-    if (!bar) return;
-    const measure = () => document.body.style.setProperty('--tube-bulk-space', (bar.getBoundingClientRect().height + 16) + 'px');
-    const observer = new ResizeObserver(measure);
-    measure();
-    observer.observe(bar);
-    return () => observer.disconnect();
-  }, [active.length]);
 
   useEffect(() => {
     if (!server || tube || dialog) return;
@@ -432,12 +441,17 @@ export default function Console({ appearance, onSignOut }) {
     setDialog(null);
   }
 
+  const pauseSeconds = settings.pause < 1 ? 3600 : settings.pause;
+
   function run(operation, names, options = {}) {
-    startDialog({ type: 'bulk', action: operation, tubes: names, state: options.state, options });
+    startDialog({
+      type: 'bulk', action: operation, tubes: names, state: options.state, fromTubeList: !tube,
+      options: operation === 'pause' ? { seconds: pauseSeconds, ...options } : options,
+    });
   }
 
   async function bulkRequest(operation, names, options, version) {
-    const seconds = settings.pause < 1 ? 3600 : settings.pause;
+    const seconds = pauseSeconds;
     let response;
     if (operation === 'pause' || operation === 'resume') {
       response = await request(queueURL(server, 'tube-actions'), {
@@ -461,50 +475,44 @@ export default function Console({ appearance, onSignOut }) {
   }
 
   async function clearInBackground(names, state, limit = 1000, batched = false) {
-    if (clearingJobs.current) {
-      setError('A job deletion is already running in this tab');
-      return;
-    }
     if (names.length === 0 || names.length > 50) {
       setError('Select 1–50 tubes');
       return;
     }
 
-    clearingJobs.current = true;
+    const targetServer = dialog.server || server;
+    const url = queueURL(targetServer, 'deletions');
     closeDialog();
     const version = pageVersion.current;
-    const describeProgress = deleted => `${names[0]} · ${deleted.toLocaleString()} / ${limit.toLocaleString()} deleted`;
-    const toastId = toast.loading('Deleting jobs…', {
-      description: batched ? describeProgress(0) : names.length === 1 ? names[0] : names.length + ' selected tubes',
+    const toastId = toast.loading('Starting job deletion…', {
+      description: names.length === 1 ? names[0] : names.length + ' selected tubes',
     });
+    let operation;
     try {
-      const clearBatch = batchLimit => request(queueURL(server, 'tube-actions'), {
-        method: 'POST',
-        data: { action: 'clear', tubes: names, state, limit: batchLimit },
+      operation = await request(url, {
+        method: 'POST', data: { tubes: names, state, limit, batched },
       });
-      if (batched) {
-        const result = await clearJobsInBatches(limit, async batchLimit => (await clearBatch(batchLimit)).results[0], deleted => {
-          toast.loading('Deleting jobs…', { id: toastId, description: describeProgress(deleted) });
-        });
-        const notify = result.error ? toast.error : toast.success;
-        const reason = result.error || (result.exhausted ? 'No more matching jobs.' : 'Deletion limit reached.');
-        notify(result.error ? 'Job deletion stopped' : 'Job deletion results', {
-          id: toastId, description: describeProgress(result.deleted) + ' · ' + reason,
-        });
-      } else {
-        const { results } = await clearBatch(limit);
-        notifyTubeResults('clear', results, toastId);
+      while (operation.tubes.some(entry => entry.status === 'queued' || entry.status === 'running')) {
+        toast.loading('Deleting jobs…', { id: toastId, description: deletionProgress(operation) });
+        await new Promise(resolve => setTimeout(resolve, 750));
+        operation = await request(queueURL(targetServer, 'deletions', operation.id));
       }
-      if (tube && pageVersion.current === version) {
-        const latest = await request(queueURL(server, 'tubes', tube)).catch(() => null);
+      const failed = operation.tubes.some(entry => entry.status === 'failed');
+      const limited = operation.tubes.some(entry => entry.status === 'skipped' || (!batched && entry.stopped === 'limit'));
+      const notify = failed ? toast.error : limited ? toast.warning : toast.success;
+      notify('Job deletion results', { id: toastId, description: deletionProgress(operation) });
+      if (tube && pageVersion.current === version && operation.tubes.some(entry => entry.tube === tube && entry.status === 'done')) {
+        const latest = await request(queueURL(targetServer, 'tubes', tube)).catch(() => null);
         if (pageVersion.current === version && (latest ? ['ready', 'reserved', 'delayed', 'buried'].every(
           name => !Number(latest.stats['current-jobs-' + name]),
-        ) : !batched)) navigate(locationFor(server));
+        ) : !batched)) navigate(locationFor(targetServer));
       }
     } catch (failure) {
-      toast.error(failure.message, { id: toastId });
+      if (operation) toast.error('Job deletion status is unavailable', {
+        id: toastId, description: 'The server may still be deleting jobs. ' + failure.message,
+      });
+      else toast.error(failure.message, { id: toastId });
     } finally {
-      clearingJobs.current = false;
       reload();
     }
   }

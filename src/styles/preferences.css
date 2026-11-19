@@ -9,6 +9,7 @@
 .console-preference-dialog-add { --preference-width: 35rem; }
 .console-preference-dialog-clear { --preference-width: 29rem; }
 .console-preference-dialog-sample { --preference-width: 29rem; }
+.console-preference-dialog-tube-action { --preference-width: 30rem; }
 
 .console-preference-dialog .console-dialog-header,
 .console-preference-dialog .console-dialog-footer { padding: .75rem 1rem; }
@@ -170,7 +171,7 @@
 .console-preference-dialog .console-destination-trigger { justify-content: flex-start; width: 100%; }
 .console-destination-trigger span { flex: 1; text-align: start; }
 
-.console-preference-dialog-clear .console-preference-icon {
+.console-preference-dialog-danger .console-preference-icon {
   background: var(--bs-danger-bg-subtle);
   color: var(--bs-danger-text-emphasis);
 }
@@ -185,6 +186,47 @@
   color: var(--bs-danger-text-emphasis);
   font-size: .825rem;
 }
+
+.console-tube-action-detail {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .25rem .75rem;
+  margin: 0;
+  padding: .55rem .7rem;
+  border-radius: var(--bs-border-radius);
+  background: var(--console-inset);
+  font-size: .875rem;
+}
+
+.console-tube-action-detail dt { color: var(--bs-secondary-color); font-weight: 500; }
+.console-tube-action-detail dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+.console-tube-action-heading { margin-bottom: .4rem; font-size: .875rem; font-weight: 650; }
+
+.console-tube-action-list {
+  max-height: 10rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  list-style: none;
+  scrollbar-gutter: stable;
+}
+
+.console-tube-action-list li {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  padding: .42rem .7rem;
+  font-size: .8125rem;
+  overflow-wrap: anywhere;
+}
+
+.console-tube-action-list li + li { border-top: 1px solid var(--bs-border-color); }
+.console-tube-action-list .console-icon { align-self: flex-start; margin-top: .18em; color: var(--bs-secondary-color); }
+.console-tube-action-list:focus-visible { outline: 2px solid var(--console-focus); outline-offset: 2px; }
 
 @media (max-width: 575px) {
   .console-column-grid { grid-template-columns: minmax(0, 1fr); }

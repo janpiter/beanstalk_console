@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { clearJobsInBatches } from '../src/lib/clear-jobs.js';
+import { clearJobsInBatches } from '../server/clear-jobs.js';
 
 test('caps deletion at the confirmed count even when every batch still has jobs', async () => {
   const requests = [];

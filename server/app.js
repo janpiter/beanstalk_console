@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import express from 'express';
 import { tubePattern, withQueue } from './beanstalk.js';
@@ -8,6 +8,7 @@ import { browserServerStore } from './browser-servers.js';
 import { legacyActions } from './legacy.js';
 import { consoleAuth } from './auth.js';
 import { applyTubeAction, jobView, searchJobs, states } from './operations.js';
+import { clearJobsInBatches, createDeletionQueue } from './clear-jobs.js';
 
 const idPattern = /^[1-9][0-9]{0,19}(?![\s\S])/;
 const directEndpointPattern = /^(?:beanstalk:\/\/)?(?:\[[a-f0-9:.]+\]|[a-z0-9._-]+):[0-9]{1,5}$/i;
@@ -25,6 +26,11 @@ function fail(status, message) {
 function tubeName(value) {
   if (typeof value !== 'string' || !tubePattern.test(value)) fail(400, 'Invalid tube name');
   return value;
+}
+
+function selectedTubes(tubes) {
+  if (!Array.isArray(tubes) || tubes.length === 0 || tubes.length > 50) fail(400, 'Select 1–50 tubes');
+  return [...new Set(tubes.map(tubeName))];
 }
 
 function jobId(value) {
@@ -53,6 +59,24 @@ function serverEntry(address, label) {
   };
 }
 
+function runTubeAction(server, tube, action, options, deadline = Date.now() + 10000) {
+  if (Date.now() >= deadline) return { affected: 0, stopped: 'timeout' };
+  return withQueue(server, async queue => {
+    if (options.state !== 'all') return applyTubeAction(queue, tube, action, options, deadline);
+    let affected = 0;
+    for (const state of states) {
+      if (Date.now() >= deadline) return { affected, stopped: 'timeout' };
+      const result = await applyTubeAction(queue, tube, action, {
+        ...options, state, limit: options.limit - affected,
+        onProgress: options.onProgress && (count => options.onProgress(affected + count)),
+      }, deadline);
+      affected += result.affected;
+      if (result.error || result.stopped) return { ...result, affected };
+    }
+    return { affected };
+  });
+}
+
 function decodeCookies(request) {
   return new Map((request.get('cookie') || '').split(';').map(part => {
     const entry = part.trim();
@@ -64,6 +88,8 @@ function decodeCookies(request) {
 export function createApp(env = process.env) {
   const app = express();
   const api = express.Router();
+  const enqueueDeletion = createDeletionQueue();
+  const deletions = new Map();
   const configured = new Map();
   const config = env.BEANSTALK_SERVERS ? env.BEANSTALK_SERVERS.split(',').map(value => value.trim()).filter(Boolean) : [];
   if (env.BEANSTALKD_HOST) config.unshift(`Default server=${env.BEANSTALKD_HOST}:${env.BEANSTALKD_PORT || 11300}`);
@@ -344,38 +370,84 @@ export function createApp(env = process.env) {
   }
   api.delete('/servers/:serverId/jobs/:id', queueRoute((request, queue) => changeJob(request, queue, 'delete', 'DELETED')));
   api.post('/servers/:serverId/jobs/:id/kick', queueRoute((request, queue) => changeJob(request, queue, 'kick-job', 'KICKED')));
+  api.post('/servers/:serverId/deletions', (request, response) => {
+    const { tubes, state = 'ready', limit, batched = false } = request.body || {};
+    const names = selectedTubes(tubes);
+    if (!states.includes(state) && state !== 'all') fail(400, 'Invalid job state');
+    if (typeof batched !== 'boolean' || (batched && names.length !== 1)) fail(400, 'Invalid deletion mode');
+    const target = integer(limit, 1000, 1, batched ? Number.MAX_SAFE_INTEGER : 1000);
+    const server = request.queueServer;
+    const id = randomUUID();
+    const operation = {
+      id, state, target,
+      tubes: names.map(tube => ({ tube, status: 'queued', affected: 0 })),
+    };
+    deletions.set(id, { serverId: server.id, operation });
+
+    const tasks = operation.tubes.map(entry => {
+      const clear = limit => {
+        const previous = entry.affected;
+        return runTubeAction(server, entry.tube, 'clear', {
+          state, limit, onProgress: count => { entry.affected = previous + count; },
+        });
+      };
+      const task = enqueueDeletion(server.id, entry.tube, async () => {
+        entry.status = 'running';
+        if (!batched) return clear(target);
+        const result = await clearJobsInBatches(target, clear, affected => { entry.affected = affected; });
+        return {
+          affected: result.deleted,
+          error: result.error,
+          stopped: result.deleted === target ? 'limit' : undefined,
+        };
+      });
+      if (!task) {
+        entry.status = 'skipped';
+        return;
+      }
+      return task.then(
+        result => Object.assign(entry, result, { status: result.error || result.stopped === 'timeout' ? 'failed' : 'done' }),
+        error => Object.assign(entry, { error: error.message, status: 'failed' }),
+      );
+    });
+    Promise.all(tasks).then(() => {
+      setTimeout(() => deletions.delete(id), 10 * 60 * 1000).unref();
+    });
+    response.status(202).json(operation);
+  });
+
+  api.get('/servers/:serverId/deletions/:id', (request, response) => {
+    const deletion = deletions.get(request.params.id);
+    if (deletion?.serverId !== request.queueServer.id) fail(404, 'Deletion status is unavailable');
+    response.json(deletion.operation);
+  });
+
   api.post('/servers/:serverId/tube-actions', async (request, response) => {
     const { action, tubes, state = 'ready', limit, seconds, destination } = request.body || {};
     if (!['pause', 'resume', 'kick', 'clear', 'move', 'bury'].includes(action)) fail(400, 'Invalid tube operation');
-    if (!Array.isArray(tubes) || tubes.length === 0 || tubes.length > 50) fail(400, 'Select 1–50 tubes');
-    const names = [...new Set(tubes.map(tubeName))];
+    const names = selectedTubes(tubes);
     if (action === 'move' && (names.length !== 1 || names.includes(tubeName(destination)))) fail(400, 'Choose a different destination tube');
     if (!states.includes(state) && state !== (action === 'kick' ? 'any' : action === 'clear' ? 'all' : '')) fail(400, 'Invalid job state');
     if ((action === 'bury' && state !== 'ready') || (action === 'kick' && state === 'ready')) fail(400, 'Job state is incompatible with this operation');
     const options = { state, limit: integer(limit, 100, 1, 1000), seconds: action === 'resume' ? 0 : integer(seconds, 60, 0, maxUint), destination };
     const results = [];
     const deadline = Date.now() + 10000;
+    const server = request.queueServer;
+    if (action === 'clear') {
+      const results = await Promise.all(names.map(async tube => {
+        const task = enqueueDeletion(server.id, tube, () => runTubeAction(server, tube, action, options, deadline));
+        if (!task) return { tube, affected: 0, error: 'This tube already has a queued or running deletion' };
+        try {
+          return { tube, ...await task };
+        } catch (error) {
+          return { tube, affected: 0, error: error.message };
+        }
+      }));
+      return response.json({ results });
+    }
     for (const tube of names) {
-      if (Date.now() >= deadline) {
-        results.push({ tube, affected: 0, stopped: 'timeout' });
-        continue;
-      }
       try {
-        const result = await withQueue(request.queueServer, async queue => {
-          if (state !== 'all') return applyTubeAction(queue, tube, action, options, deadline);
-          const groups = [];
-          let affected = 0;
-          for (const phase of states) {
-            if (affected >= options.limit || Date.now() >= deadline) break;
-            const result = await applyTubeAction(queue, tube, action, {
-              ...options, state: phase, limit: options.limit - affected,
-            }, deadline);
-            affected += result.affected;
-            groups.push(result);
-            if (result.error || result.stopped) break;
-          }
-          return { affected, error: groups.at(-1)?.error, stopped: groups.at(-1)?.stopped };
-        });
+        const result = await runTubeAction(server, tube, action, options, deadline);
         results.push({ tube, ...result });
       } catch (error) {
         results.push({ tube, affected: 0, error: error.message });

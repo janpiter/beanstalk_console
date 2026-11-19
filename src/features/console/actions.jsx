@@ -36,13 +36,18 @@ export function CopyPayloadDialog({ payload, close, returnFocus }) {
 }
 
 function titleFor(action) {
+  if (action.fromTubeList) {
+    if (action.action === 'clear') return 'Clear jobs';
+    if (action.action === 'kick') return 'Kick jobs';
+    return nameOf(action.action) + (action.tubes.length === 1 ? ' tube' : ' tubes');
+  }
   switch (action.type) {
     case 'add': return 'Add new job';
     case 'server': return action.server ? 'Edit Server' : 'Add Server';
     case 'loadSample': return action.pickDestination ? 'Send sample' : 'Kick sample job';
     case 'sample': return 'Add to samples';
     case 'columns': return 'Filter columns';
-    case 'settings': return 'Edit settings';
+    case 'settings': return 'Advanced settings';
     case 'removeServer': return 'Remove server';
     case 'deleteSample': return 'Delete sample';
     case 'deleteJob': return 'Delete job';
@@ -130,6 +135,42 @@ function ClearJobFields({ action }) {
       fieldClassName="" min="1" max={Number.MAX_SAFE_INTEGER} step="1" required />
     <p className="console-job-delete-note mb-0"><Icon name="warning" weight="regular" />
       <span>Deletion is permanent. New jobs may be included, but they do not raise this limit.</span></p>
+  </div>;
+}
+
+const tubeActionIcons = { clear: 'trashSimple', kick: 'fastForward', pause: 'pause', resume: 'play' };
+
+const tubeActionDescriptions = {
+  clear: 'Permanently delete ready, delayed, and buried jobs.',
+  kick: 'Make buried jobs ready for workers to reserve.',
+  pause: 'Temporarily stop workers from reserving jobs.',
+  resume: 'Allow workers to reserve jobs again.',
+};
+
+function TubeListActionSummary({ action }) {
+  const { action: operation, tubes, options } = action;
+  const clearing = operation === 'clear';
+  const pause = operation === 'pause';
+  const duration = pause && (options.seconds === 3600 ? '1 hour' :
+    new Intl.NumberFormat('en', { style: 'unit', unit: 'second', unitDisplay: 'long' }).format(options.seconds));
+
+  return <div className="console-preference-form">
+    <p className={clearing ? 'console-job-delete-note mb-0' : 'small text-body-secondary mb-0'}>
+      {clearing && <Icon name="warning" weight="regular" />}
+      <span>{tubeActionDescriptions[operation]}</span>
+    </p>
+    {(pause || options.limit !== undefined) && <dl className="console-tube-action-detail">
+      <dt>{pause ? 'Pause duration' : 'Maximum jobs per tube'}</dt>
+      <dd>{pause ? duration : options.limit.toLocaleString()}</dd>
+    </dl>}
+    <section aria-labelledby="selected-tubes-heading">
+      <h6 id="selected-tubes-heading" className="console-tube-action-heading">
+        {tubes.length} {tubes.length === 1 ? 'tube' : 'tubes'} selected
+      </h6>
+      <ul className="console-tube-action-list" tabIndex={0}>
+        {tubes.map(tube => <li key={tube}><Icon name="tube" weight="regular" /><span>{tube}</span></li>)}
+      </ul>
+    </section>
   </div>;
 }
 
@@ -251,8 +292,9 @@ export function ActionDialog({ action, close, submit, settings, servers, tubes, 
   const [move, setMove] = useState('new');
   const title = titleFor(action);
   const variant = action.pickDestination ? 'send' : action.clearCount !== undefined ? 'clear'
-    : action.action === 'move' ? 'move' : action.type;
-  const preferenceIcon = { server: 'server', settings: 'settings', columns: 'listChecks', send: 'play', add: 'addCircle', move: 'release', clear: 'trashSimple', sample: 'listChecks' }[variant];
+    : action.action === 'move' ? 'move' : action.fromTubeList ? 'tube-action' : action.type;
+  const preferenceIcon = action.fromTubeList ? tubeActionIcons[action.action]
+    : { server: 'server', settings: 'advancedSettings', columns: 'listChecks', send: 'play', add: 'addCircle', move: 'release', clear: 'trashSimple', sample: 'listChecks' }[variant];
   const preferenceAction = {
     server: action.server ? 'Save changes' : 'Add server', settings: 'Save settings', columns: 'Apply columns',
     send: 'Send job', add: 'Add job', move: move === '$buried' ? 'Bury jobs' : 'Move jobs', clear: 'Delete jobs', sample: 'Save sample',
@@ -261,7 +303,8 @@ export function ActionDialog({ action, close, submit, settings, servers, tubes, 
   const primary = preferenceAction ?? title;
   return <Dialog open onOpenChange={open => { if (!open && !busy) close(); }}>
     <DialogContent dismissible={!busy} returnFocus={returnFocus}
-      className={preferenceIcon ? `console-preference-dialog console-preference-dialog-${variant}` : ''}>
+      className={preferenceIcon
+        ? `console-preference-dialog console-preference-dialog-${variant}${destructive ? ' console-preference-dialog-danger' : ''}` : ''}>
       <form className="console-dialog-form" onSubmit={event => { event.preventDefault(); submit(new FormData(event.currentTarget)); }}>
         <DialogHeader>
           {preferenceIcon ? <div className="console-preference-heading">
@@ -282,7 +325,8 @@ export function ActionDialog({ action, close, submit, settings, servers, tubes, 
           {action.type === 'columns' && <ColumnFilter fields={action.fields} visible={action.visible} tubeColumns={action.tubeColumns} />}
           {action.type === 'settings' && <Settings settings={settings} />}
           {action.type === 'bulk' && <>
-            {action.action === 'move' ? <MoveJobFields action={action} tubes={tubes} mode={move} setMode={setMove} />
+            {action.fromTubeList ? <TubeListActionSummary action={action} />
+              : action.action === 'move' ? <MoveJobFields action={action} tubes={tubes} mode={move} setMode={setMove} />
               : action.clearCount !== undefined ? <ClearJobFields action={action} />
               : action.action === 'clear' && action.state === 'all'
               ? <p className="mb-0">Delete ready, delayed, and buried jobs from <strong className="text-break">{action.tubes.join(', ')}</strong>?</p>

@@ -36,7 +36,7 @@ export async function searchJobs(queue, tube, query, start, limit) {
   return finish(String(cursor));
 }
 
-export async function applyTubeAction(queue, tube, action, { state, limit, seconds, destination }, deadline) {
+export async function applyTubeAction(queue, tube, action, { state, limit, seconds, destination, onProgress }, deadline) {
   if (action === 'pause' || action === 'resume') {
     await queue.expect(`pause-tube ${tube} ${seconds}`, 'PAUSED');
     return { affected: 1 };
@@ -83,6 +83,7 @@ export async function applyTubeAction(queue, tube, action, { state, limit, secon
         await queue.expect('delete ' + job.id, 'DELETED');
       }
       affected++;
+      onProgress?.(affected);
     }
     return { affected, stopped: affected === limit ? 'limit' : 'timeout' };
   } catch (error) {
