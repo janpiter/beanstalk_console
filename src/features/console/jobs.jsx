@@ -13,24 +13,26 @@ export function BulkControls({ selected, allTubes, visibleTubes, run }) {
   return <div id="tubeBulkActions" className="tube-bulk-actions" aria-live="polite">
     <div className="tube-bulk-info"><strong>{selected.length} {selected.length === 1 ? 'tube' : 'tubes'} selected{hidden > 0 && ' (' + hidden + ' hidden by filter)'}</strong>{disabled && ' · select up to 50'}</div>
     <div className="tube-bulk-controls">
+      <div className="tube-bulk-action-group" role="group" aria-label="Pause controls">
+        <button type="button" className={neutral} disabled={disabled} onClick={() => run('pause', selected)}><Icon name="pause" weight="fill" /> Pause</button>
+        <button type="button" className={neutral} disabled={disabled} onClick={() => run('resume', selected)}><Icon name="play" weight="fill" /> Resume</button>
+      </div>
       <div className="tube-bulk-action-group" role="group" aria-label="Kick buried jobs">
         <button type="button" className={neutral} disabled={disabled} onClick={() => kick(1)}><Icon name="fastForward" weight="fill" /> Kick 1 job</button>
         <form className="input-group input-group-sm tube-kick-more" onSubmit={event => { event.preventDefault(); kick(count); }}>
-          <button type="submit" className={neutral} disabled={disabled}><Icon name="skipForward" weight="fill" /> Kick more</button>
-          <input type="number" className="form-control console-inset" min="1" max="1000" required value={count}
+          <input type="number" className="form-control console-inset" min="1" max="1000" required value={count} disabled={disabled}
             aria-label="Number of jobs to kick per tube" onChange={event => setCount(event.target.valueAsNumber || '')} />
+          <button type="submit" className={neutral} disabled={disabled}><Icon name="skipForward" weight="fill" /> Kick more</button>
         </form>
         <button type="button" className={neutral} disabled={disabled || !allTubes.some(tube => selected.includes(tube.name) && tube['current-jobs-buried'] > 0)}
           onClick={() => kick(1000)}><Icon name="fastForward" weight="fill" /> Kick all jobs</button>
       </div>
-      <div className="tube-bulk-action-group tube-bulk-pause-group" role="group" aria-label="Pause controls">
-        <button type="button" className={neutral} disabled={disabled} onClick={() => run('pause', selected)}><Icon name="pause" weight="fill" /> Pause</button>
-        <button type="button" className={neutral} disabled={disabled} onClick={() => run('resume', selected)}><Icon name="play" weight="fill" /> Resume</button>
+      <div className="tube-bulk-action-group">
+        <button type="button" className={neutral + ' console-danger-action'} disabled={disabled}
+          onClick={() => run('clear', selected, { state: 'all' })}>
+          <Icon name="trashSimple" /> Clear jobs
+        </button>
       </div>
-      <button type="button" className={neutral + ' console-danger-action'} disabled={disabled}
-        onClick={() => run('clear', selected, { state: 'all' })}>
-        <Icon name="trashSimple" /> Clear jobs
-      </button>
     </div>
   </div>;
 }
@@ -138,16 +140,16 @@ export function TubeJobs({ detail, server, tube, samples, onAction, onCopy, sett
   return <>
     <section id="actionsRow"><div className="row"><div className="col text-end">
       <div className="card rounded-bottom-2 rounded-top-0 bg-body border-0 shadow-sm"><div className="card-body pt-4"><div className="row g-1">
+        <div className="col-md-2 col-12 text-start"><ActionLink className={neutral + ' w-100'} title={paused ? 'Pause seconds left: ' + detail.stats['pause-time-left'] : 'Temporarily prevent jobs being reserved from the given tube'}
+          href={actionLocation(server, tube, 'pause', { count: paused ? 0 : -1 })} onAction={() => run(paused ? 'resume' : 'pause', [tube])}><Icon name={paused ? 'play' : 'pause'} weight="fill" /> {paused ? 'Unpause tube' : 'Pause tube'}</ActionLink></div>
         <div className="col-md-2 col-12"><ActionLink className={neutral + ' w-100'} href={actionLocation(server, tube, 'kick', { count: 1 })} onAction={() => kick(1)}><Icon name="fastForward" weight="fill" /> Kick 1 job</ActionLink></div>
         <div className="col-md-2 col-12"><form onSubmit={event => { event.preventDefault(); kick(count); }}><div className="input-group input-group-sm">
-          <button type="submit" className={neutral + ' col-7'}><Icon name="skipForward" weight="fill" /> Kick more</button>
           <input type="number" value={count} min="1" max="1000" required className="form-control form-control-sm console-inset kick_jobs_no col-5"
             aria-label="Number of jobs to kick" onChange={event => setCount(event.target.valueAsNumber || '')} />
+          <button type="submit" className={neutral + ' col-7'}><Icon name="skipForward" weight="fill" /> Kick more</button>
         </div></form></div>
         <div className="col-md-2 col-12"><ActionLink className={neutral + ' w-100'} href={actionLocation(server, tube, 'kick', { count: Math.min(buried, 1000) })}
           onAction={() => buried > 0 && kick(Math.min(buried, 1000), 'buried')}><Icon name="fastForward" weight="fill" /> Kick all jobs</ActionLink></div>
-        <div className="col-md-2 col-12 text-start"><ActionLink className={neutral + ' w-100'} title={paused ? 'Pause seconds left: ' + detail.stats['pause-time-left'] : 'Temporarily prevent jobs being reserved from the given tube'}
-          href={actionLocation(server, tube, 'pause', { count: paused ? 0 : -1 })} onAction={() => run(paused ? 'resume' : 'pause', [tube])}><Icon name={paused ? 'play' : 'pause'} weight="fill" /> {paused ? 'Unpause tube' : 'Pause tube'}</ActionLink></div>
         <div className="col-md-4 col-12 text-end"><div className="btn-group">
           <button type="button" className={success} id="addJob" onClick={() => onAction({ type: 'add', tube })}><Icon name="addCircle" weight="fill" /> Add job</button>
           <Menu className="btn-group" button={success + ' dropdown-toggle'} title="Saved jobs" end label="">
