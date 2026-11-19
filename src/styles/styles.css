@@ -131,15 +131,6 @@ button.nav-link {
   border-top: var(--bs-border-width) solid var(--bs-border-color);
 }
 
-.console-dialog [data-slot="tabs-trigger"][data-state="active"] {
-  color: var(--bs-nav-tabs-link-active-color);
-  background-color: var(--bs-nav-tabs-link-active-bg);
-  border-color: var(--bs-nav-tabs-link-active-border-color);
-}
-
-.console-dialog .column-panel[data-state="inactive"] { display: none; }
-.server-column-panels { max-height: 350px; overflow-y: auto; }
-
 .legacy-payload { max-height: 500px; overflow: auto; overflow-wrap: anywhere; }
 .legacy-payload > .json-toggle { margin-left: 1.2em; }
 .legacy-payload.no-highlight .json-string, .legacy-payload.no-highlight .json-literal { color: inherit; font-weight: inherit; }

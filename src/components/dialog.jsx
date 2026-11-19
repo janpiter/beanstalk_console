@@ -5,7 +5,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 export const Dialog = DialogPrimitive.Root;
 export const DialogClose = DialogPrimitive.Close;
 
-export function DialogContent({ children, dismissible, returnFocus }) {
+export function DialogContent({ children, dismissible, returnFocus, className = '' }) {
   const panel = useRef(null);
   function preventDismiss(event) {
     if (!dismissible) event.preventDefault();
@@ -16,13 +16,16 @@ export function DialogContent({ children, dismissible, returnFocus }) {
     <DialogPrimitive.Content
       ref={panel}
       data-slot="dialog-content"
-      className="console-dialog"
+      className={`console-dialog ${className}`}
       aria-describedby={undefined}
       onOpenAutoFocus={event => {
         event.preventDefault();
         panel.current?.focus({ preventScroll: true });
       }}
-      onEscapeKeyDown={preventDismiss}
+      onEscapeKeyDown={event => {
+        if (event.target?.closest?.('[data-search-picker-open]')) event.preventDefault();
+        else preventDismiss(event);
+      }}
       onInteractOutside={preventDismiss}
       onCloseAutoFocus={event => {
         if (returnFocus?.isConnected) {

@@ -171,7 +171,7 @@ export function Menu({ children, label, title, scroll, end, searchable, button =
     };
   }, [end, open, scroll, searchable]);
 
-  return <div ref={ref} className={className} onBlur={event => {
+  return <div ref={ref} className={className} data-search-picker-open={searchable && open ? '' : undefined} onBlur={event => {
     if (searchable && event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false);
   }} onKeyDown={event => {
     if (event.key === 'Escape' && open) {
@@ -184,7 +184,11 @@ export function Menu({ children, label, title, scroll, end, searchable, button =
       aria-expanded={open} onClick={() => setOpen(!open)}>{label}</button>
     {open && <Panel ref={menuRef} id={id} className={'dropdown-menu console-dropdown-menu show' + (searchable ? ' console-navigation-menu' : '')}
       style={{ position: 'fixed' }} onClick={event => {
-        if (!searchable || event.target.closest('a[href]')) setOpen(false);
+        const option = event.target.closest('[data-picker-option]');
+        if (!searchable || option || event.target.closest('a[href]')) {
+          setOpen(false);
+          if (option?.tagName === 'BUTTON') triggerRef.current?.focus({ preventScroll: true });
+        }
       }}>{children}</Panel>}
   </div>;
 }

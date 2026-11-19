@@ -5,13 +5,14 @@ import {
   savePreference, serverFields, ServerSummary, states, TubeTable, tubeFields,
 } from '../../components/console-ui.jsx';
 import { Icon } from '../../components/icon.jsx';
-import { NavigationPicker } from '../../components/navigation-picker.jsx';
+import { NavigationPicker, serverPickerOption } from '../../components/navigation-picker.jsx';
 import { Toaster } from '../../components/sonner.jsx';
 import { ActionDialog, CopyPayloadDialog, defaultSettings } from './actions.jsx';
 import { BulkControls, SampleEditor, Samples, SearchResults, TubeJobs, TubeJobsSkeleton } from './jobs.jsx';
 import { endpoint, request, useResource } from '../../lib/api.js';
 import { clearJobsInBatches } from '../../lib/clear-jobs.js';
 import { copyText } from '../../lib/clipboard.js';
+import { sampleDestinations } from '../../lib/sample-destinations.js';
 
 function settingsFromCookies() {
   const value = (key, fallback) => Number(legacyCookie(key)) || fallback;
@@ -112,7 +113,7 @@ function AppearanceSettings({ theme, fontSize, changeTheme, changeFontSize }) {
 function SignOutAction({ onSignOut }) {
   const [busy, setBusy] = useState(false);
   return <li className="console-sign-out-footer">
-    <button type="button" className={neutral + ' console-danger-action console-sign-out w-100 justify-content-start fw-semibold'}
+    <button type="button" className={neutral + ' console-sign-out w-100 justify-content-start fw-semibold'}
       disabled={busy} aria-busy={busy} onClick={async event => {
         event.stopPropagation();
         setBusy(true);
@@ -131,7 +132,7 @@ function Navigation({ servers, server, tubes, tube, loadingServers, loadingTubes
   const [expanded, setExpanded] = useState(false);
   const availableServers = server && !servers.some(item => item.id === server.id) ? [...servers, server] : servers;
   const serverOptions = [{ id: '', label: 'All servers', href: './?' }, ...availableServers.map(item => ({
-    id: item.id, label: item.label, description: item.label === item.endpoint ? undefined : item.endpoint,
+    ...serverPickerOption(item),
     href: locationFor(item),
   }))];
   const tubeNames = tubes.map(item => item.name);
@@ -584,8 +585,14 @@ export default function Console({ appearance, onSignOut }) {
           });
           message = 'Job #' + result.id + ' added'; break;
         }
-        case 'loadSample':
-          await postAction('loadSample', target, dialog.tube, { key: dialog.sample.id });
+        case 'loadSample': {
+          const destinationServer = dialog.pickDestination ? servers.find(item => item.id === get('sendServer')) : target;
+          const destinationTube = dialog.pickDestination ? get('sendTube') : dialog.tube;
+          if (dialog.pickDestination && (!destinationServer || !sampleDestinations(dialog.sample).includes(destinationTube))) {
+            setError('Choose a server and a tube.');
+            return;
+          }
+          await postAction('loadSample', destinationServer, destinationTube, { key: dialog.sample.id });
           if (params.get('redirect') === './?action=manageSamples') {
             reload();
             if (pageVersion.current === version) {
@@ -595,6 +602,7 @@ export default function Console({ appearance, onSignOut }) {
             return;
           }
           message = 'Job placed on tube'; break;
+        }
         case 'sample': {
           await request(endpoint('samples'), {
             method: 'POST',
@@ -614,12 +622,17 @@ export default function Console({ appearance, onSignOut }) {
         case 'bulk': {
           const mode = get('destinationMode');
           const operation = mode === '$buried' ? 'bury' : dialog.action;
+          const destination = mode === 'new' || mode === 'existing' ? get('destTube') : dialog.destination;
+          if (operation === 'move' && !destination?.trim()) {
+            setError('Choose a destination tube.');
+            return;
+          }
           const result = await bulkRequest(operation, dialog.tubes, {
-            state: dialog.state || 'ready', destination: mode === 'new' ? get('destTube') : mode || dialog.destination, ...dialog.options,
+            state: dialog.state || 'ready', destination, ...dialog.options,
           }, version);
           if (operation === 'move' && result[0]?.affected > 0 && !result[0]?.error) {
             reload();
-            if (pageVersion.current === version) navigate(locationFor(server, mode === 'new' ? get('destTube') : mode || dialog.destination), { replace: dialog.legacyURL });
+            if (pageVersion.current === version) navigate(locationFor(server, destination), { replace: dialog.legacyURL });
             return;
           }
           break;
@@ -663,7 +676,7 @@ export default function Console({ appearance, onSignOut }) {
           ? <SampleEditor key={editingSample?.id || 'new'} sample={editingSample} servers={servers} save={saveSample} busy={busy} error={error} />
           : samples.error || samples.data ? <Alert error message={samples.error || 'Sample no longer exists'} />
             : <Alert message="Loading sample…" />)
-          : samplesPage ? <Samples resource={samples} servers={servers} />
+          : samplesPage ? <Samples resource={samples} servers={servers} onAction={startDialog} />
           : !serverKey ? (serversResource.data || loadingServers) && <ServerSummary {...{ servers, fields: visibleServerFields, revision, interval: polling, onAction: startDialog, personalEnabled: serversResource.data?.personalEnabled }} loading={loadingServers} />
           : (server || resolvingServer) && !tube ? <>
             <div className="col-12 px-3 pb-3 bg-body rounded-3 rounded-top-0 tube-filter-bar">
@@ -692,6 +705,6 @@ export default function Console({ appearance, onSignOut }) {
     </div>}
     {dialog?.type === 'copyPayload'
       ? <CopyPayloadDialog payload={dialog.payload} close={closeDialog} returnFocus={dialogFocus.current} />
-      : dialog && <ActionDialog action={dialog} close={closeDialog} returnFocus={dialogFocus.current} {...{ submit, settings, tubes, busy, error }} />}
+      : dialog && <ActionDialog action={dialog} close={closeDialog} returnFocus={dialogFocus.current} {...{ submit, settings, servers, tubes, busy, error }} />}
   </div>;
 }

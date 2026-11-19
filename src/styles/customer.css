@@ -72,7 +72,7 @@ pre code {
     height: 31px!important
 }
 
-.dropdown-item:active {
+:is(.dropdown-item, .console-sign-out):active {
     background-color: #367d55!important;
 }
 

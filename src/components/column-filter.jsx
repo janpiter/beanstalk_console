@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { nameOf, serverFieldDescriptions, tubeFieldDescriptions } from './console-ui.jsx';
 
@@ -7,8 +8,10 @@ const tubeCurrent = [
 ];
 const tubeOther = ['cmd-delete', 'cmd-pause-tube', 'pause', 'pause-time-left', 'total-jobs'];
 const serverGroups = ['binlog', 'cmd', 'current', 'other'];
+const groupLabels = { binlog: 'Binlog', cmd: 'Commands', current: 'Current', other: 'Other' };
 
 export function ColumnFilter({ fields, visible, tubeColumns }) {
+  const [selected, setSelected] = useState(() => new Set(visible));
   const descriptions = tubeColumns ? tubeFieldDescriptions : serverFieldDescriptions;
   const groups = tubeColumns
     ? [['current', tubeCurrent], ['other', tubeOther]]
@@ -17,23 +20,34 @@ export function ColumnFilter({ fields, visible, tubeColumns }) {
       return field.startsWith(group + '-');
     })]);
 
-  return <TabsPrimitive.Root data-slot="tabs" defaultValue={groups[0][0]}>
-    <TabsPrimitive.List data-slot="tabs-list" className="nav nav-tabs nav-justified" aria-label="Column groups">
-      {groups.map(([group]) => <TabsPrimitive.Trigger data-slot="tabs-trigger" key={group} value={group}
-        className="nav-link text-body">
-        {nameOf(group)}
+  function toggle(key, checked) {
+    setSelected(previous => {
+      const next = new Set(previous);
+      if (checked) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
+  return <TabsPrimitive.Root className="console-column-filter" defaultValue={groups[0][0]}>
+    <div className="console-column-filter-summary">
+      <span>{tubeColumns ? 'Tube table' : 'Server table'}</span>
+      <span className="console-column-count" role="status">{fields.filter(field => selected.has(field)).length} of {fields.length} selected</span>
+    </div>
+    <TabsPrimitive.List className="console-column-tabs" aria-label="Column groups">
+      {groups.map(([group]) => <TabsPrimitive.Trigger key={group} value={group} className="btn btn-sm console-column-tab">
+        {groupLabels[group]}
       </TabsPrimitive.Trigger>)}
     </TabsPrimitive.List>
-    <div className={tubeColumns ? undefined : 'server-column-panels'}>
-      {groups.map(([group, keys]) => <TabsPrimitive.Content data-slot="tabs-content" key={group} value={group} forceMount className="column-panel pt-3">
-        {keys.map(key => <label className="form-check mb-2" key={key}>
-          <input type="checkbox" className="form-check-input" name="filter" value={key} defaultChecked={visible.includes(key)} />
-          <span className="form-check-label">
-            <strong className="d-block">{nameOf(key)}</strong>
-            <small className="d-block text-body-secondary lh-sm">{descriptions[key][0].toUpperCase() + descriptions[key].slice(1)}</small>
-          </span>
-        </label>)}
-      </TabsPrimitive.Content>)}
-    </div>
+    {groups.map(([group, keys]) => <TabsPrimitive.Content key={group} value={group} forceMount className="console-column-grid">
+      {keys.map(key => <label className="console-column-option" key={key}>
+        <input type="checkbox" className="form-check-input" name="filter" value={key} checked={selected.has(key)}
+          onChange={event => toggle(key, event.target.checked)} />
+        <span>
+          <strong>{nameOf(key)}</strong>
+          <small>{descriptions[key]}</small>
+        </span>
+      </label>)}
+    </TabsPrimitive.Content>)}
   </TabsPrimitive.Root>;
 }

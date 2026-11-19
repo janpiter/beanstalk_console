@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useResource } from '../../lib/api.js';
+import { sampleDestinations } from '../../lib/sample-destinations.js';
 import { actionLocation, ActionLink, Alert, Divider, empty, Item, locationFor, Menu, nameOf, neutral, queueURL, Skeleton, states, success, textLink } from '../../components/console-ui.jsx';
 import { Icon } from '../../components/icon.jsx';
 import { FullPayload, PayloadEditor, PayloadViewer } from '../../components/payload.jsx';
@@ -38,56 +39,72 @@ export function BulkControls({ selected, allTubes, visibleTubes, run }) {
 }
 
 function duration(value) {
-  let seconds = Math.max(0, Number(value) || 0);
+  if (value == null || value === '') return '—';
+  let seconds = Number(value);
+  if (!Number.isSafeInteger(seconds) || seconds < 0) return String(value);
   const units = [];
-  for (const [unit, size] of [['days', 86400], ['hours', 3600], ['minutes', 60], ['seconds', 1]]) {
+  for (const [unit, size] of [['d', 86400], ['h', 3600], ['m', 60], ['s', 1]]) {
     const count = Math.floor(seconds / size);
-    if (count) units.push(count + ' ' + unit);
+    if (count) units.push(count + unit);
     seconds %= size;
   }
-  return units.join(' ') || '0';
+  return units.join(' ') || '0s';
 }
 
-const jobFields = [
-  ['id', 'ID', 'key'], ['pri', 'Priority', 'priority'], ['ttr', 'TTR', 'history'],
-  ['file', 'File', 'file'], ['reserves', 'Reserves', 'restart'], ['timeouts', 'Timeouts', 'pulse'],
-  ['releases', 'Releases', 'release'], ['buries', 'Buries', 'flame'], ['kicks', 'Kicks', 'fastForward'],
+const jobIdentityFields = [['id', 'ID', 'key'], ['pri', 'Priority', 'priority'], ['file', 'File', 'file']];
+const jobTimeFields = [['age', 'Age'], ['delay', 'Delay'], ['ttr', 'TTR'], ['time-left', 'Time left']];
+const jobActivityFields = [
+  ['reserves', 'Reserves'], ['timeouts', 'Timeouts'], ['releases', 'Releases'], ['buries', 'Buries'], ['kicks', 'Kicks'],
 ];
-const timeFields = [['age', 'clock'], ['delay', 'timer'], ['time-left', 'compass']];
 
-function sampleLink(server, tube, sample, redirect = false) {
+function JobMetadata({ job }) {
+  function group(fields, kind, heading) {
+    const timing = kind === 'timing';
+    return <div className={'job-meta-' + kind}>
+      {heading && <h6 className="job-meta-heading">{heading}</h6>}
+      <dl className="job-meta-values">
+        {fields.map(([key, label, icon]) => {
+          const value = key === 'id' ? job?.id : job?.stats[key];
+          const seconds = timing && value != null && value !== '' ? value + ' seconds' : undefined;
+          return <div key={key} className="job-meta-item">
+            <dt title={key === 'ttr' ? 'Time to run' : undefined}>{icon && <Icon name={icon} weight="regular" />}{label}</dt>
+            <dd className={key === 'id' ? 'font-monospace' : undefined} title={seconds}>
+              {job ? (timing ? duration(value) : value ?? '—') : <Skeleton className="skeleton-stat" />}
+            </dd>
+          </div>;
+        })}
+      </dl>
+    </div>;
+  }
+
+  return <div className="job-metadata">
+    {group(jobIdentityFields, 'identity')}
+    {group(jobTimeFields, 'timing', 'Timing')}
+    {group(jobActivityFields, 'activity', 'Activity')}
+  </div>;
+}
+
+function sampleLink(server, tube, sample) {
   const url = new URL(locationFor(server, tube, 'loadSample'), location.href);
   url.searchParams.set('key', sample.id);
-  if (redirect) url.searchParams.set('redirect', './?action=manageSamples');
   return url.pathname + url.search;
 }
 
 function JobCard({ state, job, count, server, tube, onAction, onCopy, settings }) {
-  return <div className="col-12 col-sm-4"><div className="card bg-body border-0 shadow-sm"><div className="card-body">
+  return <div className="col-12 col-lg-4"><div className="card bg-body border-0 shadow-sm"><div className="card-body">
     <a id={'current-jobs-' + state} />
-    <div className="text-start">
-      <h5 className="mb-2 fw-bold d-inline">Next job in <span className={'job-state-' + state}>{state}</span> state</h5>
-      {job && <Menu className="dropdown float-end" button="btn btn-default btn-sm border-0 console-icon-button" title={'More ' + state + ' job actions'} label={<Icon name="more" className="fs-5" />} end>
+    <div className="job-card-heading">
+      <h5 className="mb-0 fw-bold">Next <span className={'job-state-' + state}>{state}</span> job</h5>
+      {job && <Menu button="btn btn-default btn-sm border-0 console-icon-button" title={'More ' + state + ' job actions'} label={<Icon name="more" className="fs-5" />} end>
         <Item onClick={() => onAction({ type: 'bulk', action: 'clear', state, tubes: [tube], clearCount: count })}>Delete all {state} jobs</Item>
         <Item onClick={() => onAction({ type: 'bulk', action: 'move', state, tubes: [tube] })}>Move all {state} to ..</Item>
         {state !== 'ready' && <Item onClick={() => onAction({ type: 'kickJob', job })}>Kick this job</Item>}
       </Menu>}
-      <hr />
     </div>
-    <div className="clearfix" />
     {!job ? <div className="row"><div className="col text-center">
       <img src={empty} className="img-fluid pt-2 opacity-25" alt="" width="200" /><h6 className="text-body-tertiary m-0 pb-3">Empty</h6>
     </div></div> : <div className="row show-grid">
-      <div className="col-sm-12">
-        <div className="row g-2">{jobFields.map(([key, name, icon]) => <div key={key} className="col-md-4 col-6">
-          <small className="text-body-tertiary fs-11px fw-semibold"><small><Icon name={icon} /> {name}</small></small>
-          <p className={'mb-0 fs-13px item text-body' + (key === 'id' ? ' font-monospace' : '')}>{key === 'id' ? job.id : job.stats[key]}</p>
-        </div>)}</div>
-        <div className="row g-2 mt-1">{timeFields.map(([key, icon]) => <div key={key} className="col-md-4 col-12">
-          <small className="text-body-tertiary fs-11px fw-semibold"><small><Icon name={icon} /> {nameOf(key)}</small></small>
-          <p className="mb-0 fs-13px item text-body" style={{ lineHeight: 1.5, minHeight: 39 }}>{duration(job.stats[key])}</p>
-        </div>)}</div>
-      </div>
+      <div className="col-12"><JobMetadata job={job} /></div>
       <div className="col-sm-12 mt-2"><div className="row g-2">
         <div className="col-12"><small className="text-body-tertiary fs-11px fw-semibold"><Icon name="jobData" /> Job Data{job.encoding === 'base64' && ' (Base64)'}</small></div>
         <div className="col-12"><div className="card console-inset border-0"><div className={'card-body card-job-' + state}><div className="row">
@@ -115,15 +132,10 @@ export function TubeJobsSkeleton() {
       </div></div>
     </div></div></section>
     <section className="jobsShowcase" aria-hidden="true"><div className="row mt-3 mb-5 pb-5"><div className="col"><div className="row g-2 mt-0">
-      {states.map(state => <div className="col-12 col-sm-4" key={state}>
+      {states.map(state => <div className="col-12 col-lg-4" key={state}>
         <div className="card bg-body border-0 shadow-sm"><div className="card-body">
-          <Skeleton className="skeleton-title" /><hr />
-          <div className="row g-3">
-            {jobFields.map(([key]) => <div className="col-md-4 col-6" key={key}>
-              <Skeleton className="skeleton-name d-block mb-2" />
-              <Skeleton className="skeleton-stat d-block" />
-            </div>)}
-          </div>
+          <div className="job-card-heading"><Skeleton className="skeleton-title" /></div>
+          <JobMetadata />
           <Skeleton className="skeleton-job-payload w-100 mt-3" />
         </div></div>
       </div>)}
@@ -180,12 +192,12 @@ function SampleFilter({ label, value, onChange }) {
   </div>;
 }
 
-export function Samples({ resource, servers }) {
+export function Samples({ resource, servers, onAction }) {
   const [filter, setFilter] = useState('');
   const samples = resource.data || [];
   const query = filter.trim().toLowerCase();
   const visible = samples.filter(sample => {
-    const destinations = sample.tubes.length ? sample.tubes : ['default'];
+    const destinations = sampleDestinations(sample);
     return sample.name.toLowerCase().includes(query) || destinations.some(tube => tube.toLowerCase().includes(query));
   });
   const loading = !resource.data && !resource.error;
@@ -217,30 +229,27 @@ export function Samples({ resource, servers }) {
         <h2 className="h6 mb-1">No matching samples</h2>
         <button type="button" className="btn btn-link btn-sm" onClick={() => setFilter('')}>Clear filter</button>
       </div>}
-      {visible.length > 0 && <div className="table-responsive"><table className="table table-striped align-middle mb-0 sample-table" aria-label="Saved job samples">
+      {visible.length > 0 && <div className="table-responsive sample-table-frame"><table className="table table-hover align-middle mb-0 sample-table" aria-label="Saved job samples">
         <thead><tr>
           <th scope="col" className="sample-name-column">Name</th>
-          <th scope="col">Send to tube</th>
+          <th scope="col">Available tubes</th>
           <th scope="col" className="text-end">Actions</th>
         </tr></thead>
         <tbody>{visible.map(sample => <tr key={sample.id}>
-          <td><a className={textLink + ' fw-semibold sample-name'} href={sampleEditorLink(sample)}>{sample.name}</a></td>
+          <th scope="row"><a className={textLink + ' fw-semibold sample-name'} href={sampleEditorLink(sample)}>{sample.name}</a></th>
           <td>
             <div className="d-flex flex-wrap gap-1">
-              {(sample.tubes.length ? sample.tubes : ['default']).map(tube => servers.length === 1
-                ? <a className={neutral + ' sample-destination'} key={tube} href={sampleLink(servers[0], tube, sample, true)}><Icon name="play" /> {tube}</a>
-                : servers.length > 1
-                  ? <Menu key={tube} button={neutral + ' dropdown-toggle sample-destination'} title={'Select server for ' + tube}
-                    label={<><Icon name="play" /> {tube}</>} scroll>
-                    {servers.map(server => <Item key={server.id} href={sampleLink(server, tube, sample, true)}>{server.label}</Item>)}
-                  </Menu>
-                  : <button type="button" key={tube} className={neutral + ' sample-destination'} disabled>{tube}</button>)}
+              {sampleDestinations(sample).map(tube => <span className="sample-tube-tag" key={tube}>{tube}</span>)}
             </div>
           </td>
           <td className="text-end text-nowrap"><div className="d-inline-flex gap-1">
-            <a className={neutral} href={sampleEditorLink(sample)} aria-label={'Edit ' + sample.name}><Icon name="edit" weight="regular" /> Edit</a>
-            <a className="btn btn-sm console-neutral console-danger-action" href={sampleEditorLink(sample, 'deleteSample')}
-              aria-label={'Delete ' + sample.name}><Icon name="trashSimple" weight="regular" /> Delete</a>
+            <button type="button" className="btn btn-sm sample-send-button" disabled={!servers.length}
+              title={!servers.length ? 'Add a server to send samples' : undefined} aria-label={'Send ' + sample.name}
+              onClick={() => onAction({ type: 'loadSample', sample, pickDestination: true })}><Icon name="play" weight="fill" /> Send</button>
+            <a className={neutral + ' console-icon-button'} href={sampleEditorLink(sample)} title="Edit sample" aria-label={'Edit ' + sample.name}>
+              <Icon name="edit" weight="regular" /></a>
+            <a className="btn btn-sm console-neutral console-icon-button console-danger-action" href={sampleEditorLink(sample, 'deleteSample')}
+              title="Delete sample" aria-label={'Delete ' + sample.name}><Icon name="trashSimple" weight="regular" /></a>
           </div></td>
         </tr>)}</tbody>
       </table></div>}
@@ -248,31 +257,31 @@ export function Samples({ resource, servers }) {
   </section>;
 }
 
-function AvailableSampleTubes({ server, checked, toggle, query, initiallyOpen }) {
-  const resource = useResource(queueURL(server, 'overview'), 0);
+function AvailableSampleTubes({ server, checked, toggle, query }) {
+  const [revision, setRevision] = useState(0);
+  const resource = useResource(queueURL(server, 'overview'), revision);
   const tubes = [...(resource.data?.tubes || [])]
     .filter(({ name }) => name.toLowerCase().includes(query))
     .sort((a, b) => a.name.localeCompare(b.name));
-  return <details className="sample-server" open={initiallyOpen}>
-    <summary>
-      <span className="fw-semibold">{server.label}</span>
-      {server.label !== server.endpoint && <small className="d-block text-body-secondary">{server.endpoint}</small>}
-    </summary>
-    <div className="sample-server-tubes">
-      {resource.error ? <p className="small text-danger-emphasis mb-0" role="alert">{resource.error}</p>
-        : !resource.data ? <p className="small text-body-secondary mb-0" role="status">Loading tubes…</p>
-        : tubes.length ? tubes.map(({ name }) => <label className="sample-tube-option" key={name}>
-          <input type="checkbox" className="form-check-input" name={'tubes[' + name + ']'} value="1"
-            checked={checked.includes(name)} onChange={event => toggle(name, event.target.checked)} />
-          <span>{name}</span>
-        </label>) : <p className="small text-body-secondary mb-0">{query ? 'No matching tubes' : 'No tubes available'}</p>}
-    </div>
-  </details>;
+
+  return <div className="sample-tube-list" role="group" aria-label={'Tubes on ' + server.label}>
+    {resource.error ? <div className="sample-tube-message">
+      <p className="small text-danger-emphasis mb-2" role="alert">{resource.error}</p>
+      <button type="button" className={neutral} onClick={() => setRevision(value => value + 1)}>Retry</button>
+    </div> : !resource.data ? <p className="sample-tube-message" role="status">Loading tubes…</p>
+      : tubes.length ? tubes.map(({ name }) => <label className="sample-tube-option" key={name}>
+        <input type="checkbox" className="form-check-input" checked={checked.includes(name)}
+          onChange={event => toggle(name, event.target.checked)} />
+        <span>{name}</span>
+      </label>) : <p className="sample-tube-message">{query ? 'No matching tubes' : 'No tubes available'}</p>}
+  </div>;
 }
 
 export function SampleEditor({ sample, servers, save, busy, error }) {
   const [checked, setChecked] = useState(sample?.tubes || []);
   const [filter, setFilter] = useState('');
+  const [serverId, setServerId] = useState('');
+  const activeServer = servers.find(server => server.id === serverId) ?? servers[0];
   const toggle = (name, enabled) => setChecked(previous => enabled ? [...new Set([...previous, name])] : previous.filter(item => item !== name));
   const listLink = locationFor(null, null, 'manageSamples');
   return <section className="my-4" aria-labelledby="sample-editor-title">
@@ -287,34 +296,42 @@ export function SampleEditor({ sample, servers, save, busy, error }) {
     }}>
       {error && <div className="px-3"><Alert error message={error} /></div>}
       <fieldset disabled={busy} aria-busy={busy}>
-        <div className="card-body sample-editor-layout">
-          <div>
+        <div className="sample-editor-layout">
+          <div className="sample-editor-fields">
             <label className="form-label fw-semibold" htmlFor="addsamplename">Sample name</label>
-            <input id="addsamplename" className="form-control" name="name" defaultValue={sample?.name}
+            <input id="addsamplename" className="form-control form-control-sm" name="name" defaultValue={sample?.name}
               placeholder="e.g. Notification replay" autoComplete="off" required maxLength="200" />
             <div className="mt-3">
-              <PayloadEditor id="jobdata" name="jobdata" label="Job payload" rows={12} defaultValue={sample?.data} />
+              <PayloadEditor id="jobdata" name="jobdata" label="Job payload" rows={8} defaultValue={sample?.data} />
             </div>
           </div>
-          <div className="sample-editor-tubes">
-            <h2 className="h6 mb-1">Available on tubes</h2>
-            <p className="small text-body-secondary mb-3">
-              {checked.length ? checked.length + (checked.length === 1 ? ' tube selected' : ' tubes selected') : 'Uses the default tube if you leave this empty.'}
-            </p>
-            {checked.length > 0 && <ul className="d-flex flex-wrap gap-1 list-unstyled mb-3">
+          <section className="sample-editor-tubes" aria-labelledby="sample-tubes-title">
+            <div className="sample-tube-heading">
+              <h2 id="sample-tubes-title" className="h6 mb-0">Available on tubes</h2>
+              <small className="sample-tube-count" role="status">{checked.length} selected</small>
+            </div>
+            {!checked.length && <p className="small text-body-secondary mb-0">Uses the default tube if you leave this empty.</p>}
+            {checked.length > 0 && <ul className="sample-selected-tubes list-unstyled mb-0" aria-label="Selected tubes">
               {checked.map(name => <li key={name}>
-                <button type="button" className={neutral + ' sample-destination'} onClick={() => toggle(name, false)}
-                  aria-label={'Remove tube ' + name}>{name} <Icon name="close" /></button>
+                <button type="button" className="sample-tube-chip" onClick={() => toggle(name, false)}
+                  aria-label={'Remove tube ' + name}><span>{name}</span><Icon name="close" /></button>
               </li>)}
             </ul>}
-            {servers.length > 0 ? <>
-              <SampleFilter label="Filter tubes" value={filter} onChange={setFilter} />
-              <div className="d-grid gap-2 mt-3">
-                {servers.map((server, index) => <AvailableSampleTubes key={server.id} {...{ server, checked, toggle }}
-                  query={filter.trim().toLowerCase()} initiallyOpen={index === 0} />)}
+            {activeServer ? <>
+              <div>
+                <label className="form-label fw-semibold mb-1" htmlFor="sample-tube-server">Browse server</label>
+                <select className="form-select form-select-sm" id="sample-tube-server" value={activeServer.id}
+                  onChange={event => setServerId(event.target.value)}>
+                  {servers.map(server => <option key={server.id} value={server.id}>
+                    {server.label === server.endpoint ? server.label : server.label + ' (' + server.endpoint + ')'}
+                  </option>)}
+                </select>
               </div>
+              <SampleFilter label="Filter tubes" value={filter} onChange={setFilter} />
+              <AvailableSampleTubes key={activeServer.id} server={activeServer} checked={checked} toggle={toggle}
+                query={filter.trim().toLowerCase()} />
             </> : <p className="small text-body-secondary mb-0">Add a server to browse its tubes.</p>}
-          </div>
+          </section>
         </div>
         <div className="card-footer bg-transparent d-flex justify-content-end gap-2">
           <a className={neutral} href={listLink}>Cancel</a>

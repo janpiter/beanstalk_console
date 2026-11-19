@@ -2,7 +2,10 @@ import { useRef, useState } from 'react';
 import { Alert, nameOf, neutral, success } from '../../components/console-ui.jsx';
 import { ColumnFilter } from '../../components/column-filter.jsx';
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/dialog.jsx';
+import { Icon } from '../../components/icon.jsx';
+import { DestinationPicker, serverPickerOption } from '../../components/navigation-picker.jsx';
 import { PayloadEditor } from '../../components/payload.jsx';
+import { sampleDestinations } from '../../lib/sample-destinations.js';
 
 const defaults = { pause: -1, interval: 500, auto: false, searchLimit: 25, json: true, unserialize: true, base64: false, highlight: true };
 export { defaults as defaultSettings };
@@ -36,10 +39,10 @@ function titleFor(action) {
   switch (action.type) {
     case 'add': return 'Add new job';
     case 'server': return action.server ? 'Edit Server' : 'Add Server';
-    case 'loadSample': return 'Kick sample job';
+    case 'loadSample': return action.pickDestination ? 'Send sample' : 'Kick sample job';
     case 'sample': return 'Add to samples';
     case 'columns': return 'Filter columns';
-    case 'settings': return 'Settings';
+    case 'settings': return 'Edit settings';
     case 'removeServer': return 'Remove server';
     case 'deleteSample': return 'Delete sample';
     case 'deleteJob': return 'Delete job';
@@ -51,98 +54,241 @@ function titleFor(action) {
   }
 }
 
-function Field({ label, name, ...props }) {
+function Field({ label, name, hint, fieldClassName = 'mb-3', ...props }) {
   const id = 'field-' + name;
-  return <div className="mb-3">
+  return <div className={fieldClassName}>
     <label className="form-label" htmlFor={id}>{label}</label>
-    <input id={id} name={name} className="form-control form-control-sm focused" {...props} />
+    <input id={id} name={name} className="form-control form-control-sm focused" aria-describedby={hint ? id + '-hint' : undefined} {...props} />
+    {hint && <small className="console-field-hint" id={id + '-hint'}>{hint}</small>}
   </div>;
 }
 
-function JobNumberField({ label, name }) {
+function JobNumberField({ label, name, placeholder }) {
   const [value, setValue] = useState('');
-  return <Field label={label} name={name} inputMode="numeric" pattern="[0-9]+" value={value}
+  return <Field label={label} name={name} placeholder={placeholder} fieldClassName="" inputMode="numeric" pattern="[0-9]+" value={value}
     onChange={event => {
       const next = event.currentTarget.value;
       if (/^[0-9]*$/.test(next)) setValue(next);
     }} />;
 }
 
-function Checkbox({ name, checked, children, value }) {
-  return <label className="form-check"><input type="checkbox" className="form-check-input" name={name} defaultChecked={checked} value={value} />{children}</label>;
+function AddJobFields({ action }) {
+  return <div className="console-preference-form">
+    <Field label="Tube name" name="tubeName" defaultValue={action.tube || 'default'} fieldClassName=""
+      autoCapitalize="none" spellCheck={false} maxLength="200" required />
+    <fieldset className="console-job-options">
+      <legend>Job options <small className="text-body-secondary fw-normal">(optional)</small></legend>
+      <div className="add-job-options d-grid gap-2">
+        <JobNumberField label="Priority" name="tubePriority" placeholder="1024" />
+        <JobNumberField label="Delay (sec)" name="tubeDelay" placeholder="0" />
+        <JobNumberField label="TTR (sec)" name="tubeTtr" placeholder="60" />
+      </div>
+      <small className="console-field-hint">Leave fields blank to use the shown defaults.</small>
+    </fieldset>
+    <PayloadEditor id="field-tubeData" name="tubeData" label="Job data" rows={10} defaultValue={action.payload} required />
+  </div>;
+}
+
+function JobSource({ tube }) {
+  return <div className="console-job-source">
+    <span>Source tube</span><strong>{tube}</strong>
+  </div>;
+}
+
+function MoveJobFields({ action, tubes, mode, setMode }) {
+  const available = tubes.filter(item => !action.tubes.includes(item.name));
+  const choices = [
+    { value: 'new', label: 'New tube' },
+    { value: 'existing', label: 'Existing tube', disabled: !available.length },
+    ...(action.state === 'ready' ? [{ value: '$buried', label: 'Bury here' }] : []),
+  ];
+
+  return <div className="console-preference-form">
+    <JobSource tube={action.tubes[0]} />
+    <fieldset className="console-job-destination">
+      <legend>Destination</legend>
+      <div className="console-job-destination-options">
+        {choices.map(({ value, label, disabled }) => <label key={value} className="console-job-destination-choice">
+          <input type="radio" className="form-check-input" name="destinationMode" value={value} disabled={disabled}
+            checked={mode === value} onChange={() => setMode(value)} />
+          {label}
+        </label>)}
+      </div>
+    </fieldset>
+    {mode === 'new' ? <Field label="New tube name" name="destTube" fieldClassName="" maxLength="200"
+      placeholder="e.g. retry-jobs" autoCapitalize="none" spellCheck={false} required />
+      : mode === 'existing' ? <DestinationPicker name="destTube" label="Destination tube" icon="tube"
+        options={available.map(({ name }) => ({ id: name, label: name }))} />
+        : <p className="small text-body-secondary mb-0">Jobs stay in this tube and change to the buried state.</p>}
+  </div>;
+}
+
+function ClearJobFields({ action }) {
+  return <div className="console-preference-form">
+    <JobSource tube={action.tubes[0]} />
+    <Field type="number" name="clearCount" label="Maximum jobs to delete" defaultValue={action.clearCount}
+      fieldClassName="" min="1" max={Number.MAX_SAFE_INTEGER} step="1" required />
+    <p className="console-job-delete-note mb-0"><Icon name="warning" weight="regular" />
+      <span>Deletion is permanent. New jobs may be included, but they do not raise this limit.</span></p>
+  </div>;
+}
+
+function SaveSampleFields({ action, tubes }) {
+  const [filter, setFilter] = useState('');
+  const [selected, setSelected] = useState(() => new Set(action.data.tubes));
+  const state = action.job.stats?.state;
+  const query = filter.trim().toLowerCase();
+  const available = [...new Set([...action.data.tubes, ...tubes.map(({ name }) => name)])];
+  const visible = available.filter(name => name.toLowerCase().includes(query));
+
+  function toggle(name, checked) {
+    setSelected(previous => {
+      const next = new Set(previous);
+      if (checked) next.add(name);
+      else next.delete(name);
+      return next;
+    });
+  }
+
+  return <div className="console-preference-form">
+    <div className="console-job-source">
+      <span>Source job</span><strong className="font-monospace">#{action.job.id}</strong>
+      {state && <strong className={'job-state-' + state}>{nameOf(state)}</strong>}
+    </div>
+    <Field label="Sample name" name="addsamplename" defaultValue={action.data.name} fieldClassName=""
+      placeholder="e.g. Retry notification" autoComplete="off" maxLength="200" required />
+    <fieldset className="console-save-sample-tubes">
+      <legend>Available on tubes</legend>
+      <div className="sample-filter">
+        <Icon name="search" />
+        <input type="search" className="form-control form-control-sm" aria-label="Filter tubes" placeholder="Filter tubes"
+          value={filter} onChange={event => setFilter(event.target.value)} />
+      </div>
+      <div className="sample-tube-list" role="group" aria-label="Available tubes">
+        {visible.length ? visible.map(name => <label className="sample-tube-option" key={name}>
+          <input type="checkbox" className="form-check-input" checked={selected.has(name)}
+            onChange={event => toggle(name, event.target.checked)} />
+          <span>{name}</span>
+        </label>) : <p className="sample-tube-message">No matching tubes</p>}
+      </div>
+      <small className="text-body-secondary" role="status">
+        {selected.size ? `${selected.size} selected` : 'Uses the default tube if none are selected.'}
+      </small>
+      {[...selected].map(name => <input type="hidden" name="tubes[]" value={name} key={name} />)}
+    </fieldset>
+  </div>;
+}
+
+function ServerFields({ server }) {
+  return <div className="console-preference-form">
+    <div className="console-server-address">
+      <Field name="host" label="Host" defaultValue={server?.host || 'localhost'} placeholder="Hostname or IP address"
+        fieldClassName="" autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength="253" required />
+      <Field name="port" label="Port" defaultValue={server?.port ?? 11300} fieldClassName=""
+        type="number" min="1" max="65535" required />
+    </div>
+    <Field name="label" label={<>Display name <small className="text-body-secondary fw-normal">(optional)</small></>}
+      defaultValue={server && server.label !== server.endpoint ? server.label : ''} placeholder="e.g. Production queue"
+      hint="The server address is shown if you leave this blank." fieldClassName="" maxLength="100" />
+  </div>;
+}
+
+function DestinationField({ name, label, options }) {
+  return <div>
+    {options.length === 1 ? <>
+      <span className="form-label d-block">{label}</span>
+      <div className="sample-send-fixed">{options[0].label}</div>
+      <input type="hidden" name={name} value={options[0].value} />
+    </> : <>
+      <label className="form-label" htmlFor={name}>{label}</label>
+      <select className="form-select form-select-sm" id={name} name={name} defaultValue="" required>
+        <option value="" disabled>Choose a {label.toLowerCase()}</option>
+        {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    </>}
+  </div>;
+}
+
+function SampleSendFields({ sample, servers }) {
+  return <div className="console-preference-form">
+    <p className="text-break mb-0">Create a job from <strong>{sample.name}</strong>.</p>
+    <DestinationPicker name="sendServer" label="Server" icon="server" options={servers.map(serverPickerOption)} />
+    <DestinationField name="sendTube" label="Tube" options={sampleDestinations(sample).map(tube => ({ value: tube, label: tube }))} />
+  </div>;
+}
+
+function SettingsSwitch({ name, checked, children }) {
+  return <label className="console-settings-switch form-switch">
+    <span>{children}</span>
+    <input type="checkbox" role="switch" className="form-check-input" name={name} defaultChecked={checked} />
+  </label>;
 }
 
 function Settings({ settings }) {
-  return <>
-    <Field name="tubePauseSeconds" label={<><b>Tube pause seconds</b><small className="d-block text-body-tertiary">(-1 means the default: 3600, 0 is reserved for un-pause)</small></>} defaultValue={settings.pause} type="number" min="-1" max="4294967295" required />
-    <Field name="autoRefreshTimeoutMs" label={<><b>Auto-refresh interval in milliseconds</b><small className="d-block text-body-tertiary">(Default: 500)</small></>} defaultValue={settings.interval} type="number" min="100" required />
-    <Checkbox name="isEnabledAutoRefreshLoad" checked={settings.auto}>Auto-refresh on load</Checkbox>
-    <div className="mt-3"><Field name="searchResultLimit" label={<><b>Search result limits</b><small className="d-block text-body-tertiary">(Default: 25)</small></>} defaultValue={settings.searchLimit} type="number" min="1" max="100" required /></div>
-    <b>Preferred way to deal with job data</b>
-    <Checkbox name="json" checked={settings.json}>Before display: json_decode()</Checkbox>
-    <Checkbox name="unserialize" checked={settings.unserialize}>Before display: unserialize()</Checkbox>
-    <Checkbox name="base64" checked={settings.base64}>Before display: base64_decode()</Checkbox>
-    <Checkbox name="highlight" checked={settings.highlight}>After display: enable highlight</Checkbox>
-  </>;
+  return <div className="console-preference-form">
+    <fieldset className="console-settings-section">
+      <legend>Refresh and queue</legend>
+      <div className="console-settings-grid">
+        <Field name="autoRefreshTimeoutMs" label="Refresh interval (ms)" defaultValue={settings.interval}
+          fieldClassName="" type="number" min="100" required />
+        <Field name="tubePauseSeconds" label="Tube pause (sec)" defaultValue={settings.pause}
+          fieldClassName="" type="number" min="-1" max="4294967295" aria-describedby="pause-value-hint" required />
+        <Field name="searchResultLimit" label="Search result limit" defaultValue={settings.searchLimit}
+          fieldClassName="" type="number" min="1" max="100" required />
+      </div>
+      <p className="console-field-hint mb-0" id="pause-value-hint">For tube pause, −1 uses 1 hour and 0 resumes the tube.</p>
+      <SettingsSwitch name="isEnabledAutoRefreshLoad" checked={settings.auto}>Auto-refresh on load</SettingsSwitch>
+    </fieldset>
+    <fieldset className="console-settings-section">
+      <legend>Job data display</legend>
+      <div className="console-settings-switches">
+        <SettingsSwitch name="json" checked={settings.json}>Decode JSON</SettingsSwitch>
+        <SettingsSwitch name="unserialize" checked={settings.unserialize}>Decode PHP serialized data</SettingsSwitch>
+        <SettingsSwitch name="base64" checked={settings.base64}>Decode Base64</SettingsSwitch>
+        <SettingsSwitch name="highlight" checked={settings.highlight}>Syntax highlighting</SettingsSwitch>
+      </div>
+    </fieldset>
+  </div>;
 }
 
-export function ActionDialog({ action, close, submit, settings, tubes, busy, error, returnFocus }) {
+export function ActionDialog({ action, close, submit, settings, servers, tubes, busy, error, returnFocus }) {
   const [move, setMove] = useState('new');
   const title = titleFor(action);
+  const variant = action.pickDestination ? 'send' : action.clearCount !== undefined ? 'clear'
+    : action.action === 'move' ? 'move' : action.type;
+  const preferenceIcon = { server: 'server', settings: 'settings', columns: 'listChecks', send: 'play', add: 'addCircle', move: 'release', clear: 'trashSimple', sample: 'listChecks' }[variant];
+  const preferenceAction = {
+    server: action.server ? 'Save changes' : 'Add server', settings: 'Save settings', columns: 'Apply columns',
+    send: 'Send job', add: 'Add job', move: move === '$buried' ? 'Bury jobs' : 'Move jobs', clear: 'Delete jobs', sample: 'Save sample',
+  }[variant];
   const destructive = action.type.startsWith('delete') || action.type === 'removeServer' || action.action === 'clear';
-  const primary = action.clearCount !== undefined ? 'Delete jobs' : action.type === 'add' ? 'Save changes'
-    : ['sample', 'columns', 'settings', 'server'].includes(action.type) ? 'Save' : action.action === 'move' ? 'Move' : title;
+  const primary = preferenceAction ?? title;
   return <Dialog open onOpenChange={open => { if (!open && !busy) close(); }}>
-    <DialogContent dismissible={!busy} returnFocus={returnFocus}>
+    <DialogContent dismissible={!busy} returnFocus={returnFocus}
+      className={preferenceIcon ? `console-preference-dialog console-preference-dialog-${variant}` : ''}>
       <form className="console-dialog-form" onSubmit={event => { event.preventDefault(); submit(new FormData(event.currentTarget)); }}>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          {preferenceIcon ? <div className="console-preference-heading">
+            <span className="console-preference-icon"><Icon name={preferenceIcon} weight="regular" /></span>
+            <DialogTitle>{title}</DialogTitle>
+          </div> : <DialogTitle>{title}</DialogTitle>}
           <DialogClose asChild>
             <button type="button" className="btn-close" aria-label="Close dialog" disabled={busy} />
           </DialogClose>
         </DialogHeader>
         <div className="console-dialog-body"><fieldset disabled={busy}>
-          {action.type === 'add' && <>
-            <Field label="*Tube name" name="tubeName" defaultValue={action.tube || 'default'} maxLength="200" required />
-            <div className="add-job-options d-grid gap-2">
-              <JobNumberField label="Priority" name="tubePriority" />
-              <JobNumberField label="Delay" name="tubeDelay" />
-              <JobNumberField label="TTR" name="tubeTtr" />
-            </div>
-            <div className="mb-3">
-              <PayloadEditor id="field-tubeData" name="tubeData" label="Data" rows={5} defaultValue={action.payload} required />
-            </div>
-          </>}
-          {action.type === 'server' && <>
-            <Field label="Host" name="host" defaultValue={action.server?.host || 'localhost'} required maxLength="253" />
-            <Field label="Port" name="port" defaultValue={action.server?.port ?? 11300} required min="1" max="65535" type="number" />
-            <Field label="Name (optional)" name="label" defaultValue={action.server && action.server.label !== action.server.endpoint ? action.server.label : ''} maxLength="100" />
-          </>}
-          {action.type === 'loadSample' && <p>Place <strong>{action.sample.name}</strong> on <strong>{action.tube}</strong>?</p>}
-          {action.type === 'sample' && <>
-            <Field label={<><b>Name *</b> <i>(highlighted text is auto populated)</i></>} name="addsamplename" defaultValue={action.data?.name} autoComplete="off" required maxLength="200" />
-            <label className="form-label"><b>Available on tubes *</b></label>
-            <div style={{ maxHeight: 250, overflowY: 'auto' }}>
-              {[...new Set([...action.data.tubes, ...tubes.map(({ name }) => name)])].map(name =>
-                <Checkbox key={name} name="tubes[]" checked={action.data.tubes.includes(name)} value={name}>{name}</Checkbox>)}
-            </div>
-          </>}
+          {action.type === 'add' && <AddJobFields action={action} />}
+          {action.type === 'server' && <ServerFields server={action.server} />}
+          {action.type === 'loadSample' && (action.pickDestination
+            ? <SampleSendFields sample={action.sample} servers={servers} />
+            : <p>Place <strong>{action.sample.name}</strong> on <strong>{action.tube}</strong>?</p>)}
+          {action.type === 'sample' && <SaveSampleFields action={action} tubes={tubes} />}
           {action.type === 'columns' && <ColumnFilter fields={action.fields} visible={action.visible} tubeColumns={action.tubeColumns} />}
           {action.type === 'settings' && <Settings settings={settings} />}
           {action.type === 'bulk' && <>
-            {action.action === 'move' ? <>
-              <label className="form-check"><input className="form-check-input" type="radio" name="destinationMode" value="new" checked={move === 'new'} onChange={() => setMove('new')} />New tube</label>
-              {move === 'new' && <Field label="Tube name" name="destTube" required maxLength="200" />}
-              {tubes.filter(item => !action.tubes.includes(item.name)).map(item => <label key={item.name} className="form-check">
-                <input className="form-check-input" type="radio" name="destinationMode" value={item.name} checked={move === item.name} onChange={() => setMove(item.name)} />{item.name}
-              </label>)}
-              {action.state === 'ready' && <label className="form-check"><input className="form-check-input" type="radio" name="destinationMode" value="$buried" checked={move === '$buried'} onChange={() => setMove('$buried')} />buried</label>}
-            </> : action.clearCount !== undefined ? <>
-              <p>Delete {action.state === 'all' ? 'ready, delayed, and buried' : action.state} jobs from <strong className="text-break">{action.tubes[0]}</strong>?</p>
-              <Field type="number" name="clearCount" label="Maximum jobs to delete" defaultValue={action.clearCount}
-                min="1" max={Number.MAX_SAFE_INTEGER} step="1" required />
-              <p className="small text-body-secondary mb-0">New jobs do not increase this limit, but they may be included in the jobs deleted.</p>
-            </> : action.action === 'clear' && action.state === 'all'
+            {action.action === 'move' ? <MoveJobFields action={action} tubes={tubes} mode={move} setMode={setMove} />
+              : action.clearCount !== undefined ? <ClearJobFields action={action} />
+              : action.action === 'clear' && action.state === 'all'
               ? <p className="mb-0">Delete ready, delayed, and buried jobs from <strong className="text-break">{action.tubes.join(', ')}</strong>?</p>
               : <p className="mb-0">{title} on <strong>{action.tubes.join(', ')}</strong>?</p>}
           </>}
@@ -153,9 +299,10 @@ export function ActionDialog({ action, close, submit, settings, tubes, busy, err
         </fieldset></div>
         <DialogFooter>
           <DialogClose asChild>
-            <button type="button" className="btn btn-secondary btn-sm" disabled={busy}>{action.type === 'server' ? 'Cancel' : 'Close'}</button>
+            <button type="button" className={preferenceIcon ? neutral : 'btn btn-secondary btn-sm'} disabled={busy}>{preferenceIcon ? 'Cancel' : 'Close'}</button>
           </DialogClose>
-          <button type="submit" className={destructive ? 'btn btn-danger btn-sm' : success} disabled={busy}>{busy ? 'Working…' : primary}</button>
+          <button type="submit" className={destructive ? 'btn btn-danger btn-sm' : success}
+            disabled={busy || (action.pickDestination && !servers.length)}>{busy ? (action.pickDestination ? 'Sending…' : 'Working…') : primary}</button>
         </DialogFooter>
       </form>
     </DialogContent>

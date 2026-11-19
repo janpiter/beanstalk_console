@@ -8,5 +8,6 @@ import './styles/customer.css';
 import './styles/vendor/magula.css';
 import './styles/styles.css';
 import './styles/theme.css';
+import './styles/preferences.css';
 
 createRoot(document.getElementById('root')).render(<App />);
