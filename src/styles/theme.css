@@ -676,7 +676,7 @@ body {
   }
 }
 
-body.page-all-tubes .navbar {
+.navbar-with-tube-filter {
   box-shadow:
     inset 1px 0 var(--bs-border-color-translucent),
     inset -1px 0 var(--bs-border-color-translucent),
@@ -716,12 +716,8 @@ body.page-all-tubes .navbar {
   --bs-table-bg-state: var(--console-hover);
 }
 
-#summaryTable td.td-current-jobs-buried.hasValue,
-#servers-index td.td-current-jobs-buried.hasValue,
 .job-state-buried { color: var(--console-buried); }
 
-#summaryTable td.td-current-jobs-delayed.hasValue,
-#servers-index td.td-current-jobs-delayed.hasValue,
 .job-state-delayed { color: var(--console-delayed); }
 
 .job-state-ready { color: var(--console-ready); }

@@ -199,11 +199,77 @@ export const Item = ({ children, href, onClick, newTab = false }) => <li>{href
   : <button type="button" className="dropdown-item fs-14px" onClick={onClick}>{children}</button>}</li>;
 export const Divider = () => <li><hr className="dropdown-divider" /></li>;
 
-function StatCells({ fields, record, previous }) {
+const jobFields = ['urgent', 'ready', 'reserved', 'delayed', 'buried'].map(state => 'current-jobs-' + state).concat('total-jobs');
+const tubeGroups = [
+  ['Jobs', jobFields],
+  ['Connections', ['current-using', 'current-waiting', 'current-watching']],
+  ['Pause', ['pause', 'pause-time-left']],
+  ['Commands', ['cmd-delete', 'cmd-pause-tube']],
+];
+const serverActivity = ['current-connections', 'current-tubes', 'current-producers', 'current-waiting', 'current-workers', 'total-connections'];
+const serverCommands = serverFields.filter(field => field.startsWith('cmd-'));
+const serverBinlog = serverFields.filter(field => field.startsWith('binlog-'));
+const serverGroups = [
+  ['Jobs', [...jobFields, 'job-timeouts', 'max-job-size']],
+  ['Activity', serverActivity],
+  ['Commands', serverCommands],
+  ['Binlog', serverBinlog],
+  ['Server details', serverFields.filter(field => ![...jobFields, 'job-timeouts', 'max-job-size', ...serverActivity, ...serverCommands, ...serverBinlog].includes(field))],
+];
+const statLabels = {
+  'total-jobs': 'Total', pause: 'Duration', 'pause-time-left': 'Time left',
+  'current-connections': 'Connections', 'current-tubes': 'Tubes',
+};
+const groupedFields = (fields, groups) => groups.map(([label, keys]) => [label, keys.filter(field => fields.includes(field))])
+  .filter(([, keys]) => keys.length > 0);
+const groupStarts = groups => groups.map(([, keys]) => keys[0]);
+const statGroupClass = (field, starts) => starts.includes(field) ? ' queue-metric-group-start' : '';
+const statLabel = field => statLabels[field] ?? nameOf(field.replace(/^(current-jobs-|current-|cmd-)/, ''));
+const statNumber = new Intl.NumberFormat(undefined, { maximumFractionDigits: 20 });
+
+function StatHeaderRows({ groups, before, after, children }) {
+  if (!groups.length) return <tr>{before}{children}{after}</tr>;
+  return <>
+    <tr className="queue-metric-groups">
+      {before}
+      {groups.map(([label, fields]) => <th key={label} scope="colgroup" colSpan={fields.length} className="queue-metric-group-start">{label}</th>)}
+      {after}
+    </tr>
+    <tr>{children}</tr>
+  </>;
+}
+
+function StatColumnGroups({ groups, leading, actions }) {
+  return <>
+    {leading > 0 && <colgroup span={leading} />}
+    {groups.map(([label, fields]) => <colgroup key={label} span={fields.length} />)}
+    {actions && <colgroup span={1} />}
+  </>;
+}
+
+function StatHeaders({ fields, starts, descriptions, jumpToJobs }) {
+  return fields.map(field => {
+    const label = statLabel(field);
+    const linksToJob = jumpToJobs && states.some(state => field === 'current-jobs-' + state);
+    return <th key={field} scope="col" title={descriptions[field]} className={'queue-stat-cell' + statGroupClass(field, starts)}>
+      {linksToJob ? <a className="queue-stat-link" href={'#' + field}>{label}</a> : label}
+    </th>;
+  });
+}
+
+function StatCells({ fields, starts, record, previous }) {
   return fields.map(field => {
     const value = record?.[field];
     const changed = previous?.[field] != null && value !== previous[field];
-    return <td key={field + ':' + value} name={field} className={'td-' + field + (value && value !== '0' ? ' hasValue' : '') + (changed ? ' stat-changed' : '')}>{value ?? ''}</td>;
+    const zero = value === 0 || value === '0';
+    const number = typeof value === 'number' || (typeof value === 'string' && /^\d+(\.\d+)?$/.test(value));
+    const formatted = number && !['id', 'version', 'hostname', 'pid'].includes(field) ? statNumber.format(value) : value;
+    const seconds = value != null && (field === 'pause' || field === 'pause-time-left');
+    const status = Number(value) > 0 && ['current-jobs-buried', 'current-jobs-delayed'].includes(field) ? field.slice('current-jobs-'.length) : null;
+    return <td key={field + ':' + value} name={field} className={'queue-stat-cell' + statGroupClass(field, starts) +
+      (zero ? ' queue-stat-zero' : '') + (changed ? ' stat-changed' : '')}>
+      {status ? <span className={'queue-stat-badge job-state-' + status}>{formatted}</span> : formatted ?? '—'}{seconds && ' s'}
+    </td>;
   });
 }
 
@@ -211,34 +277,36 @@ export function Skeleton({ className = '' }) {
   return <span className={'console-skeleton ' + className} aria-hidden="true" />;
 }
 
-function SkeletonStats({ fields }) {
-  return fields.map(field => <td key={field} aria-hidden="true"><Skeleton className="skeleton-stat" /></td>);
+function SkeletonStats({ fields, starts }) {
+  return fields.map(field => <td key={field} aria-hidden="true" className={'queue-stat-cell' + statGroupClass(field, starts)}><Skeleton className="skeleton-stat" /></td>);
 }
 
-function SkeletonRow({ fields, selection, actions }) {
+function SkeletonRow({ fields, starts, selection, actions, identity = true }) {
   return <tr aria-hidden="true">
     {selection && <td className="tube-select-column"><Skeleton className="skeleton-checkbox" /></td>}
-    <td><Skeleton className="skeleton-name" /></td>
-    <SkeletonStats fields={fields} />
-    {actions && <td className="text-center"><Skeleton className="skeleton-actions" /></td>}
+    {identity && <td className="queue-identity"><Skeleton className="skeleton-name" /></td>}
+    <SkeletonStats fields={fields} starts={starts} />
+    {actions && <td className="queue-row-actions"><Skeleton className="skeleton-actions" /></td>}
   </tr>;
 }
 
-function ServerRow({ server, fields, revision, interval, onAction, personalEnabled }) {
+function ServerRow({ server, fields, starts, revision, interval, onAction, personalEnabled }) {
   const resource = useResource(queueURL(server, 'stats'), revision, interval);
   const loading = !resource.data && !resource.error;
   return <tr aria-busy={loading || undefined}>
-    <td className="text-nowrap"><a className={textLink} href={locationFor(server)}>{server.label}</a></td>
-    {resource.data ? <StatCells fields={fields} record={resource.data} previous={resource.previousData} /> : loading
-      ? <SkeletonStats fields={fields} />
-      : fields.length > 0 && <td colSpan={fields.length} className="row-full" title={resource.error}><span className="visually-hidden">{resource.error}</span></td>}
-    <td className="text-center text-nowrap">{personalEnabled && <div className="d-inline-flex gap-1">
+    <th scope="row" className="queue-identity queue-server-identity"><a className={textLink} href={locationFor(server)}>{server.label}</a>
+      {server.label !== server.endpoint && <small className="queue-panel-context">{server.endpoint}</small>}
+    </th>
+    {resource.data ? <StatCells fields={fields} starts={starts} record={resource.data} previous={resource.previousData} /> : loading
+      ? <SkeletonStats fields={fields} starts={starts} />
+      : fields.length > 0 && <td colSpan={fields.length} className="queue-server-error" title={resource.error}>{resource.error}</td>}
+    {personalEnabled && <td className="queue-row-actions"><div className="d-inline-flex gap-1">
       <button type="button" className={neutral + ' console-icon-button'} title={'Edit server ' + server.label} aria-label={'Edit server ' + server.label}
         onClick={() => onAction({ type: 'server', server })}><Icon name="edit" weight="regular" /></button>
       <button type="button" className="btn btn-sm console-neutral console-icon-button console-danger-action"
         title={'Remove server ' + server.label} aria-label={'Remove server ' + server.label}
         onClick={() => onAction({ type: 'removeServer', server })}><Icon name="trashSimple" weight="regular" /></button>
-    </div>}</td>
+    </div></td>}
   </tr>;
 }
 
@@ -252,68 +320,92 @@ export function ServerSummary({ servers, fields, revision, interval, onAction, p
   const currentPage = Math.min(page, pageCount);
   const start = (currentPage - 1) * pageSize;
   const visible = matches.slice(start, start + pageSize);
-  return <div className="row"><div className="col-md-12 col-12 mt-4"><div className="card bg-body border-0 shadow-sm">
-    <div className="card-body">
+  const groups = groupedFields(fields, serverGroups);
+  const columns = groups.flatMap(([, keys]) => keys);
+  const starts = groupStarts(groups);
+  const columnCount = columns.length + 1 + Number(Boolean(personalEnabled));
+  const rowSpan = groups.length ? 2 : undefined;
+  return <section className="queue-panel queue-list-panel mt-4" aria-label="Servers">
       {loading && <span className="visually-hidden" role="status">Loading servers…</span>}
-      {(servers.length > pageSize || filter) && <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+      {(servers.length > pageSize || filter) && <div className="queue-panel-tools">
         <input type="search" className="form-control form-control-sm w-auto mw-100" aria-label="Filter servers"
           placeholder="Filter servers" value={filter} onChange={event => { setFilter(event.target.value); setPage(1); }} />
         <small className="text-body-secondary" role="status">{matches.length} of {servers.length} servers</small>
       </div>}
-      <div className="table-responsive"><table className="table table-striped border-dark-subtle align-middle mb-0" id="servers-index" aria-busy={loading || undefined}>
-      <thead><tr><th>Name</th>{fields.map(field => <th key={field} scope="col">{nameOf(field)}</th>)}<th>&nbsp;</th></tr></thead>
-      <tbody>{loading ? Array.from({ length: 3 }, (_, row) => <SkeletonRow key={row} fields={fields} actions />)
-        : visible.length ? visible.map(server => <ServerRow key={server.id} {...{ server, fields, revision, interval, onAction, personalEnabled }} />)
-          : query && <tr><td colSpan={fields.length + 2} className="text-body-secondary text-center py-3">No matching servers</td></tr>}</tbody>
-    </table></div></div>
-    <div className="card-body pt-1 d-flex flex-wrap align-items-center justify-content-end gap-2">
-      {pageCount > 1 && <nav className="d-flex align-items-center gap-2 me-auto" aria-label="Server list pages">
+    <div className="table-responsive" tabIndex={0} role="region" aria-label="Server statistics"><table className="table queue-table align-middle mb-0" id="servers-index" aria-busy={loading || undefined}>
+      <StatColumnGroups groups={groups} leading={1} actions={personalEnabled} />
+      <thead>
+        <StatHeaderRows groups={groups} before={<th scope="col" rowSpan={rowSpan} className="queue-identity">Server</th>}
+          after={personalEnabled && <th scope="col" rowSpan={rowSpan} className="queue-row-actions">Actions</th>}>
+          <StatHeaders fields={columns} starts={starts} descriptions={serverFieldDescriptions} />
+        </StatHeaderRows>
+      </thead>
+      <tbody>{loading ? Array.from({ length: 3 }, (_, row) => <SkeletonRow key={row} fields={columns} starts={starts} actions={personalEnabled} />)
+        : visible.length ? visible.map(server => <ServerRow key={server.id} fields={columns} {...{ server, starts, revision, interval, onAction, personalEnabled }} />)
+          : <tr><td colSpan={columnCount} className="text-body-secondary text-center py-3">{query ? 'No matching servers' : 'No servers configured'}</td></tr>}</tbody>
+    </table></div>
+    <footer className="queue-panel-tools queue-panel-footer">
+      {pageCount > 1 && <nav className="d-flex flex-wrap align-items-center gap-2" aria-label="Server list pages">
         <button type="button" className={neutral} disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>
         <small className="text-body-secondary" role="status">Page {currentPage} of {pageCount}</small>
         <button type="button" className={neutral} disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>Next</button>
       </nav>}
-      <button type="button" className={success} id="addServer" onClick={() => onAction({ type: 'server' })} disabled={!personalEnabled} title={!loading && !personalEnabled ? 'Personal servers are disabled' : undefined}>Add server</button>
-    </div>
-  </div></div></div>;
+      <button type="button" className={success + ' ms-auto'} id="addServer" onClick={() => onAction({ type: 'server' })} disabled={!personalEnabled}
+        title={!loading && !personalEnabled ? 'Personal servers are disabled' : undefined}><Icon name="add" /> Add server</button>
+    </footer>
+  </section>;
 }
 
-export function TubeTable({ tubes = [], fields, server, selected, onSelect, previous, bulk, detail, loading }) {
+export function TubeTable({ tubes = [], fields, server, selected, onSelect, previous, bulk, tubeName, detail, loading, footer, jumpToJobs }) {
   const visibleSelected = tubes.filter(tube => selected?.includes(tube.name)).length;
   const selectRef = useRef(null);
   useEffect(() => {
     if (selectRef.current) selectRef.current.indeterminate = visibleSelected > 0 && visibleSelected < tubes.length;
   }, [visibleSelected, tubes.length]);
   const previousByName = new Map(previous?.map(item => [item.name, item]));
-  return <section id="summaryTable"><div className="row"><div className="col-md-12 col-12 mt-4">
-    <div className={'card bg-body border-0 shadow-sm' + (detail ? ' rounded-top-2 rounded-bottom-0' : '')}>
-      <div className={'card-body' + (detail ? ' pb-0' : '')}>{bulk}
-        <div className="table-responsive mb-0">
-          <table className="table table-striped border-dark-subtle align-middle mb-0" aria-busy={loading || undefined}>
-            <thead><tr>
-              {!detail && <th scope="col" className="tube-select-column"><input ref={selectRef} type="checkbox" className="form-check-input" id="selectVisibleTubes" aria-label="Select all visible tubes"
-                checked={tubes.length > 0 && visibleSelected === tubes.length} disabled={tubes.length === 0} onChange={event => onSelect(tubes.map(tube => tube.name), event.target.checked)} /></th>}
-              <th scope="col">Tube Name</th>
-              {fields.map(field => <th key={field} scope="col">{detail && !loading && states.some(state => field === 'current-jobs-' + state)
-                ? <a className="a-unstyled" href={'#' + field}>{nameOf(field)}</a> : nameOf(field)}</th>)}
-            </tr></thead>
-            <tbody>{loading ? Array.from({ length: detail ? 1 : 6 }, (_, row) => <SkeletonRow key={row} fields={fields} selection={!detail} />)
-              : tubes.map(tube => {
+  const groups = groupedFields(fields, tubeGroups);
+  const columns = groups.flatMap(([, keys]) => keys);
+  const starts = groupStarts(groups);
+  const pauseLeft = tubes[0]?.['pause-time-left'];
+  const hasStats = !detail || columns.length > 0;
+  const rowSpan = groups.length ? 2 : undefined;
+  return <section id="summaryTable" className="mt-4" aria-labelledby={detail ? 'tube-table-title' : undefined} aria-label={detail ? undefined : 'Tubes'}>
+    {bulk}
+    <div className={'queue-panel' + (detail ? '' : ' queue-list-panel')}>
+      {detail && <header className="queue-panel-header">
+        <h2 id="tube-table-title" className="queue-panel-title">{tubeName}</h2>
+        {server && <span className="queue-panel-context" title={server.label}><Icon name="server" /> {server.endpoint || server.label}</span>}
+        {pauseLeft > 0 && <span className="queue-stat-badge job-state-delayed" title={`${pauseLeft} seconds remaining`}><Icon name="pause" /> Paused</span>}
+      </header>}
+        {hasStats && <div className="table-responsive" tabIndex={0} role="region" aria-label="Tube statistics">
+          <table className={'table queue-table align-middle mb-0' + (detail ? ' queue-table-detail' : '')} aria-busy={loading || undefined}>
+            <StatColumnGroups groups={groups} leading={detail ? 0 : 2} />
+            <thead><StatHeaderRows groups={groups} before={!detail && <>
+              <th scope="col" rowSpan={rowSpan} className="tube-select-column"><input ref={selectRef} type="checkbox" className="form-check-input" id="selectVisibleTubes" aria-label="Select all visible tubes"
+                checked={tubes.length > 0 && visibleSelected === tubes.length} disabled={tubes.length === 0} onChange={event => onSelect(tubes.map(tube => tube.name), event.target.checked)} /></th>
+              <th scope="col" rowSpan={rowSpan} className="queue-identity">Tube name</th>
+            </>}>
+              <StatHeaders fields={columns} starts={starts} descriptions={tubeFieldDescriptions} jumpToJobs={jumpToJobs && !loading} />
+            </StatHeaderRows></thead>
+            <tbody>{loading ? Array.from({ length: detail ? 1 : 6 }, (_, row) => <SkeletonRow key={row} fields={columns} starts={starts} selection={!detail} identity={!detail} />)
+              : tubes.length === 0 ? <tr><td colSpan={columns.length + 2} className="text-body-secondary text-center py-3">No tubes to display</td></tr> : tubes.map(tube => {
               const paused = tube['pause-time-left'] > 0;
-              return <tr key={tube.name} className={paused ? 'tr-tube-paused' : ''} title={paused ? 'Pause seconds left: ' + tube['pause-time-left'] : undefined}>
+              return <tr key={tube.name} data-selected={!detail && selected.includes(tube.name) ? true : undefined}
+                className={!detail && paused ? 'queue-paused-row' : undefined}>
                 {!detail && <td className="tube-select-column"><input className="form-check-input tube-row-select" type="checkbox" aria-label={'Select tube ' + tube.name}
                   checked={selected.includes(tube.name)} onChange={event => onSelect([tube.name], event.target.checked)} /></td>}
-                <td className={detail ? undefined : 'tube-name-cell'} id={'tube-' + tube.name}>{detail ? tube.name : <div className="tube-name-content">
+                {!detail && <th scope="row" className="queue-identity tube-name-cell" id={'tube-' + tube.name}><div className="tube-name-content">
                   <a href={locationFor(server, tube.name)} className={textLink}>{tube.name}</a>
                   {paused && <span className="tube-paused-indicator" role="img" aria-label={'Paused, ' + tube['pause-time-left'] + ' seconds remaining'}><Icon name="pause" weight="fill" /></span>}
-                </div>}</td>
-                <StatCells fields={fields} record={tube} previous={previousByName.get(tube.name)} />
+                </div></th>}
+                <StatCells fields={columns} starts={starts} record={tube} previous={previousByName.get(tube.name)} />
               </tr>;
             })}</tbody>
           </table>
-        </div>
-      </div>
+        </div>}
+        {footer}
     </div>
-  </div></div></section>;
+  </section>;
 }
 
 export function Alert({ message, error }) {

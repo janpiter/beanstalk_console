@@ -106,7 +106,10 @@ function JobCard({ state, job, count, server, tube, onAction, onCopy, settings }
   return <div className="col-12 col-lg-4"><div className="card bg-body border-0 shadow-sm"><div className="card-body">
     <a id={'current-jobs-' + state} />
     <div className="job-card-heading">
-      <h5 className="mb-0 fw-bold">Next <span className={'job-state-' + state}>{state}</span> job</h5>
+      <div className="job-card-title">
+        <h5 className={'mb-0 job-state-' + state}>{nameOf(state)}</h5>
+        {count !== '' && <span className="text-body-secondary small">{Number(count).toLocaleString()} {Number(count) === 1 ? 'job' : 'jobs'}</span>}
+      </div>
       {job && <Menu button="btn btn-default btn-sm border-0 console-icon-button" title={'More ' + state + ' job actions'} label={<Icon name="more" className="fs-5" />} end>
         <Item onClick={() => onAction({ type: 'bulk', action: 'clear', state, tubes: [tube], clearCount: count })}>Delete all {state} jobs</Item>
         <Item onClick={() => onAction({ type: 'bulk', action: 'move', state, tubes: [tube] })}>Move all {state} to ..</Item>
@@ -114,9 +117,10 @@ function JobCard({ state, job, count, server, tube, onAction, onCopy, settings }
       </Menu>}
     </div>
     {!job ? <div className="row"><div className="col text-center">
-      <img src={empty} className="img-fluid pt-2 opacity-25" alt="" width="200" /><h6 className="text-body-tertiary m-0 pb-3">Empty</h6>
+      <img src={empty} className="img-fluid pt-2 opacity-25" alt="" width="200" />
+      <h6 className="text-body-secondary m-0 pb-3">{Number(count) > 0 ? 'No job available to preview' : `No ${state} jobs`}</h6>
     </div></div> : <div className="row show-grid">
-      <div className="col-12"><JobMetadata job={job} /></div>
+      <div className="col-12"><span className="visually-hidden">Next {state} job</span><JobMetadata job={job} /></div>
       <div className="col-sm-12 mt-2"><div className="row g-2">
         <div className="col-12"><small className="text-body-tertiary fs-11px fw-semibold"><Icon name="jobData" /> Job Data{job.encoding === 'base64' && ' (Base64)'}</small></div>
         <div className="col-12"><div className="card console-inset border-0"><div className={'card-body card-job-' + state}><div className="row">
@@ -135,18 +139,10 @@ function JobCard({ state, job, count, server, tube, onAction, onCopy, settings }
 
 export function TubeJobsSkeleton() {
   return <>
-    <section id="actionsRow" aria-hidden="true"><div className="row"><div className="col">
-      <div className="card rounded-bottom-2 rounded-top-0 bg-body border-0 shadow-sm"><div className="card-body pt-4">
-        <div className="row g-1">
-          {[0, 1, 2, 3].map(index => <div className="col-md-2 col-12" key={index}><Skeleton className="skeleton-button w-100" /></div>)}
-          <div className="col-md-4 col-12 text-end"><Skeleton className="skeleton-button skeleton-name" /></div>
-        </div>
-      </div></div>
-    </div></div></section>
     <section className="jobsShowcase" aria-hidden="true"><div className="row mt-3 mb-5 pb-5"><div className="col"><div className="row g-2 mt-0">
       {states.map(state => <div className="col-12 col-lg-4" key={state}>
         <div className="card bg-body border-0 shadow-sm"><div className="card-body">
-          <div className="job-card-heading"><Skeleton className="skeleton-title" /></div>
+          <div className="job-card-heading"><div className="job-card-title w-100"><Skeleton className="skeleton-name" /><Skeleton className="skeleton-stat" /></div></div>
           <JobMetadata />
           <Skeleton className="skeleton-job-payload w-100 mt-3" />
         </div></div>
@@ -155,36 +151,47 @@ export function TubeJobsSkeleton() {
   </>;
 }
 
-export function TubeJobs({ detail, server, tube, samples, onAction, onCopy, settings, run }) {
-  const [count, setCount] = useState(10);
-  const paused = detail.stats['pause-time-left'] > 0;
-  const buried = Number(detail.stats['current-jobs-buried']);
+export function TubeJobAddActions({ server, tube, samples, onAction }) {
   const sampleJobs = (samples || []).filter(sample => sample.tubes.includes(tube));
+  return <div className="btn-group">
+    <button type="button" className={success} id="addJob" onClick={() => onAction({ type: 'add', tube })}><Icon name="add" /> Add job</button>
+    <Menu className="btn-group" button={success + ' dropdown-toggle'} title="Saved jobs" end label="">
+      {sampleJobs.length ? <>
+        {sampleJobs.map(sample => <Item key={sample.id} href={sampleLink(server, tube, sample)}>{sample.name}</Item>)}
+        <Divider /><Item href={locationFor(null, null, 'manageSamples')}>Manage samples</Item>
+      </> : <li><span className="dropdown-item">There are no sample jobs</span></li>}
+    </Menu>
+  </div>;
+}
+
+export function TubeQueueActions({ stats, server, tube, run, children }) {
+  const [count, setCount] = useState(10);
+  const paused = stats['pause-time-left'] > 0;
+  const buried = Number(stats['current-jobs-buried']);
   const kick = (limit, state = 'any') => run('kick', [tube], { limit, state });
+  return <footer className="queue-panel-tools queue-panel-footer">
+    <div className="queue-tube-actions" role="group" aria-label="Tube actions">
+      <ActionLink className={neutral} title={paused ? 'Pause seconds left: ' + stats['pause-time-left'] : 'Temporarily prevent jobs from being reserved'}
+        href={actionLocation(server, tube, 'pause', { count: paused ? 0 : -1 })} onAction={() => run(paused ? 'resume' : 'pause', [tube])}>
+        <Icon name={paused ? 'play' : 'pause'} weight="fill" /> {paused ? 'Unpause tube' : 'Pause tube'}
+      </ActionLink>
+      <ActionLink className={neutral} href={actionLocation(server, tube, 'kick', { count: 1 })} onAction={() => kick(1)}>
+        <Icon name="fastForward" weight="fill" /> Kick 1 job
+      </ActionLink>
+      <form className="input-group input-group-sm queue-kick-count" onSubmit={event => { event.preventDefault(); kick(count); }}>
+        <input type="number" value={count} min="1" max="1000" required className="form-control form-control-sm console-inset"
+          aria-label="Number of jobs to kick" onChange={event => setCount(event.target.valueAsNumber || '')} />
+        <button type="submit" className={neutral}><Icon name="skipForward" weight="fill" /> Kick more</button>
+      </form>
+      <ActionLink className={neutral} href={actionLocation(server, tube, 'kick', { count: Math.min(buried, 1000) })}
+        onAction={() => buried > 0 && kick(Math.min(buried, 1000), 'buried')}><Icon name="fastForward" weight="fill" /> Kick all jobs</ActionLink>
+    </div>
+    <div className="ms-auto">{children}</div>
+  </footer>;
+}
+
+export function TubeJobs({ detail, server, tube, onAction, onCopy, settings }) {
   return <>
-    <section id="actionsRow"><div className="row"><div className="col text-end">
-      <div className="card rounded-bottom-2 rounded-top-0 bg-body border-0 shadow-sm"><div className="card-body pt-4"><div className="row g-1">
-        <div className="col-md-2 col-12 text-start"><ActionLink className={neutral + ' w-100'} title={paused ? 'Pause seconds left: ' + detail.stats['pause-time-left'] : 'Temporarily prevent jobs being reserved from the given tube'}
-          href={actionLocation(server, tube, 'pause', { count: paused ? 0 : -1 })} onAction={() => run(paused ? 'resume' : 'pause', [tube])}><Icon name={paused ? 'play' : 'pause'} weight="fill" /> {paused ? 'Unpause tube' : 'Pause tube'}</ActionLink></div>
-        <div className="col-md-2 col-12"><ActionLink className={neutral + ' w-100'} href={actionLocation(server, tube, 'kick', { count: 1 })} onAction={() => kick(1)}><Icon name="fastForward" weight="fill" /> Kick 1 job</ActionLink></div>
-        <div className="col-md-2 col-12"><form onSubmit={event => { event.preventDefault(); kick(count); }}><div className="input-group input-group-sm">
-          <input type="number" value={count} min="1" max="1000" required className="form-control form-control-sm console-inset kick_jobs_no col-5"
-            aria-label="Number of jobs to kick" onChange={event => setCount(event.target.valueAsNumber || '')} />
-          <button type="submit" className={neutral + ' col-7'}><Icon name="skipForward" weight="fill" /> Kick more</button>
-        </div></form></div>
-        <div className="col-md-2 col-12"><ActionLink className={neutral + ' w-100'} href={actionLocation(server, tube, 'kick', { count: Math.min(buried, 1000) })}
-          onAction={() => buried > 0 && kick(Math.min(buried, 1000), 'buried')}><Icon name="fastForward" weight="fill" /> Kick all jobs</ActionLink></div>
-        <div className="col-md-4 col-12 text-end"><div className="btn-group">
-          <button type="button" className={success} id="addJob" onClick={() => onAction({ type: 'add', tube })}><Icon name="addCircle" weight="fill" /> Add job</button>
-          <Menu className="btn-group" button={success + ' dropdown-toggle'} title="Saved jobs" end label="">
-            {sampleJobs.length ? <>
-              {sampleJobs.map(sample => <Item key={sample.id} href={sampleLink(server, tube, sample)}>{sample.name}</Item>)}
-              <Divider /><Item href={locationFor(null, null, 'manageSamples')}>Manage samples</Item>
-            </> : <li><span className="dropdown-item">There are no sample jobs</span></li>}
-          </Menu>
-        </div></div>
-      </div></div></div>
-    </div></div></section>
     <section className="jobsShowcase"><div className="row mt-3 mb-5 pb-5"><div className="col"><div className="row g-2 mt-0">
       {states.map(state => <JobCard key={state} count={detail.stats['current-jobs-' + state] ?? ''}
         {...{ state, job: detail.jobs[state], server, tube, onAction, onCopy, settings }} />)}
@@ -391,35 +398,32 @@ export function SearchResults({ server, tube, query, results, settings, onAction
   const [openPayload, setOpenPayload] = useState(null);
   const { data, error } = results;
   const loading = !data && !error;
-  return <section id="searchResult" className="card border-0 shadow-sm mt-4" aria-labelledby="job-search-heading">
-    <div className="card-body">
-      <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div className="text-break">
-          <h2 id="job-search-heading" className="h5 mb-1" ref={heading} tabIndex={-1}>Search results</h2>
-          <p className="text-body-secondary small mb-0">
-            <strong>“{query}”</strong> in <strong>{tube}</strong>
-            <span role="status">{loading ? ' · Searching…' : !error && <>
-              {' · '}{data.jobs.length.toLocaleString()} {data.jobs.length === 1 ? 'match' : 'matches'}
-              {' · '}{data.scanned.toLocaleString()} IDs scanned
-            </>}</span>
-          </p>
-        </div>
-        <a className={neutral} href={locationFor(server, tube)}><Icon name="back" /> Back to tube</a>
-      </div>
-      {error && <div className="d-flex flex-wrap align-items-center gap-2">
+  return <section id="searchResult" className="queue-panel mt-3" aria-labelledby="job-search-heading">
+      <header className="queue-panel-header">
+        <h2 id="job-search-heading" className="queue-panel-title" ref={heading} tabIndex={-1}>Search results</h2>
+        <p className="queue-panel-context mb-0">
+          <strong>“{query}”</strong>
+          <span role="status">{loading ? ' · Searching…' : !error && <>
+            {' · '}{data.jobs.length.toLocaleString()} {data.jobs.length === 1 ? 'match' : 'matches'}
+            {' · '}{data.scanned.toLocaleString()} IDs scanned
+          </>}</span>
+        </p>
+        <a className={neutral + ' ms-auto'} href={locationFor(server, tube)}><Icon name="back" /> Back to tube</a>
+      </header>
+      {error && <div className="queue-panel-tools">
         <div className="text-danger-emphasis" role="alert">Search failed. {error}</div>
         <button type="button" className={neutral} onClick={retry}>Retry search</button>
       </div>}
-      {(loading || (!error && data?.jobs.length > 0)) && <div className="table-responsive job-search-table border rounded">
-        <table className="table table-hover align-middle mb-0" aria-label="Matching jobs" aria-busy={loading}>
-          <thead><tr><th scope="col" className="job-search-id">Job ID</th><th scope="col" className="job-search-state-column">State</th><th scope="col">Payload preview</th><th scope="col" className="job-search-actions-column text-end">Actions</th></tr></thead>
+      {(loading || (!error && data?.jobs.length > 0)) && <div className="table-responsive job-search-table" tabIndex={0} role="region" aria-label="Search results table">
+        <table className="table queue-table queue-search-table align-middle mb-0" aria-label="Matching jobs" aria-busy={loading}>
+          <thead><tr><th scope="col" className="job-search-id">Job ID</th><th scope="col" className="job-search-state-column">State</th><th scope="col">Payload preview</th><th scope="col" className="job-search-actions-column queue-row-actions">Actions</th></tr></thead>
           {loading ? <tbody aria-hidden="true"><SearchSkeletonRows /></tbody> : <tbody>{data.jobs.map(job => {
             const expanded = Boolean(job.payload && openPayload?.id === job.id && openPayload.url === results.url);
             const panelId = 'search-job-payload-' + job.id;
             const toggleLabel = expanded ? 'Hide payload' : 'View payload';
             return <Fragment key={job.id}>
-              <tr>
-                <th scope="row" className="font-monospace fw-normal text-break">{job.id}</th>
+              <tr data-expanded={expanded || undefined}>
+                <th scope="row" className="job-search-job-id font-monospace text-break">{job.id}</th>
                 <td><span className={'job-search-state job-state-' + job.stats.state}>{nameOf(job.stats.state)}</span></td>
                 <td><SearchPayloadPreview job={job} query={query} /></td>
                 <td><div className="d-flex justify-content-end align-items-center gap-1">
@@ -449,17 +453,16 @@ export function SearchResults({ server, tube, query, results, settings, onAction
           })}</tbody>}
         </table>
       </div>}
-      {!error && data?.jobs.length === 0 && <div className="console-inset rounded py-4 px-3 text-center">
+      {!error && data?.jobs.length === 0 && <div className="py-4 px-3 text-center">
         <span className="fs-4 text-body-secondary"><Icon name="search" /></span>
         <p className="fw-semibold mt-2 mb-1">No matching jobs in this range</p>
         <p className="small text-body-secondary mb-0">{data.nextId ? 'Try another search term or scan the next range.' : 'Try another search term.'}</p>
       </div>}
-      {!error && data?.nextId && <div className="d-flex justify-content-end mt-3">
+      {!error && data?.nextId && <div className="queue-panel-tools queue-panel-footer justify-content-end">
         <button type="button" className={success} onClick={() => {
           next(data.nextId);
           heading.current?.focus();
         }}>Scan next range <Icon name="fastForward" weight="fill" /></button>
       </div>}
-    </div>
   </section>;
 }

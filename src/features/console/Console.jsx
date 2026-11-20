@@ -8,7 +8,7 @@ import { Icon } from '../../components/icon.jsx';
 import { NavigationPicker, serverPickerOption } from '../../components/navigation-picker.jsx';
 import { Toaster } from '../../components/sonner.jsx';
 import { ActionDialog, CopyPayloadDialog, defaultSettings } from './actions.jsx';
-import { BulkControls, SampleEditor, Samples, SearchResults, TubeJobs, TubeJobsSkeleton } from './jobs.jsx';
+import { BulkControls, SampleEditor, Samples, SearchResults, TubeJobAddActions, TubeJobs, TubeJobsSkeleton, TubeQueueActions } from './jobs.jsx';
 import { endpoint, request, useResource } from '../../lib/api.js';
 import { copyText } from '../../lib/clipboard.js';
 import { sampleDestinations } from '../../lib/sample-destinations.js';
@@ -162,7 +162,7 @@ function SignOutAction({ onSignOut }) {
   </li>;
 }
 
-function Navigation({ servers, server, tubes, tube, loadingServers, loadingTubes, serversError, tubesError, query, state, samplesPage, onSearch, onAction, refresh, changeRefresh, onColumns, searchLimit, appearance, onSignOut }) {
+function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, loadingTubes, serversError, tubesError, query, state, samplesPage, onSearch, onAction, refresh, changeRefresh, onColumns, searchLimit, appearance, onSignOut }) {
   const [expanded, setExpanded] = useState(false);
   const availableServers = server && !servers.some(item => item.id === server.id) ? [...servers, server] : servers;
   const serverOptions = [{ id: '', label: 'All servers', href: './?' }, ...availableServers.map(item => ({
@@ -174,7 +174,7 @@ function Navigation({ servers, server, tubes, tube, loadingServers, loadingTubes
   const tubeOptions = [{ id: '', label: 'All tubes', href: locationFor(server) }, ...tubeNames.map(name => ({
     id: name, label: name, href: locationFor(server, name),
   }))];
-  return <nav className="navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3 shadow-sm rounded-bottom-0" aria-label="Main navigation">
+  return <nav className={'navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3 shadow-sm' + (tubeList ? ' navbar-with-tube-filter rounded-bottom-0' : '')} aria-label="Main navigation">
     <div className="container-fluid">
       <a className="navbar-brand" href="./?"><img src={logo} alt="" width="22" height="22" className="rounded-circle mb-1" />{' '}<span>Beanstalk Console</span></a>
       <button type="button" className="border-0 btn btn-sm navbar-toggler legacy-toggler" aria-expanded={expanded} aria-controls="navbarSupportedContent" aria-label="Toggle navigation" onClick={() => setExpanded(!expanded)}><Icon name="menu" /></button>
@@ -267,6 +267,7 @@ export default function Console({ appearance, onSignOut }) {
   const search = useResource(server && tube && query ? queueURL(server, 'tubes', tube, 'search') + '?' + new URLSearchParams({ query, limit, ...(from && { from }) }) : null, revision);
   const loadingServers = !serversResource.data && !serversResource.error;
   const resolvingServer = loadingServers || Boolean(serverKey && serversResource.data && !server && !sharedLink.error);
+  const tubeList = Boolean(!samplesPage && serverKey && !tube && (server || resolvingServer));
   const loadingTubes = resolvingServer || Boolean(server && !overview.data && !overview.error);
   const loadingDetail = resolvingServer || Boolean(server && !detail.data && !detail.error);
   const tubes = [...(overview.data?.tubes || [])].sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
@@ -283,7 +284,6 @@ export default function Console({ appearance, onSignOut }) {
   }, [overviewUrl, overviewError]);
 
   useEffect(() => {
-    document.body.classList.toggle('page-all-tubes', Boolean(server && !tube));
     let title = (tube ? tube + ' - ' : '') + (server?.label || 'All servers');
     if (samplesPage) title = 'Job samples';
     if (action === 'newSample') title = 'New job sample';
@@ -292,14 +292,18 @@ export default function Console({ appearance, onSignOut }) {
   }, [server?.label, tube, samplesPage, action]);
 
   useEffect(() => {
-    const nav = document.querySelector('.navbar');
-    if (!nav || !server || tube) return;
+    if (!tubeList) return;
+    const nav = document.querySelector('.navbar-with-tube-filter');
+    if (!nav) return;
     const measure = () => document.body.style.setProperty('--tube-filter-sticky-top', nav.getBoundingClientRect().height + 'px');
     const observer = new ResizeObserver(measure);
     measure();
     observer.observe(nav);
-    return () => observer.disconnect();
-  }, [server?.id, tube]);
+    return () => {
+      observer.disconnect();
+      document.body.style.removeProperty('--tube-filter-sticky-top');
+    };
+  }, [tubeList]);
 
   useEffect(() => {
     const scroll = () => setScrolled(window.scrollY > 100);
@@ -727,7 +731,7 @@ export default function Console({ appearance, onSignOut }) {
   return <div onClick={followLink}>
     <Toaster theme={appearance.resolvedTheme} />
     <div className="container-fluid">
-      <Navigation {...{ servers, server, tubes, tube, loadingServers, loadingTubes, query, samplesPage, onAction: startDialog, refresh, changeRefresh, searchLimit: settings.searchLimit }}
+      <Navigation {...{ servers, server, tubes, tube, tubeList, loadingServers, loadingTubes, query, samplesPage, onAction: startDialog, refresh, changeRefresh, searchLimit: settings.searchLimit }}
         serversError={serversResource.error} tubesError={overview.error}
         state={params.get('state') || ''} onSearch={submitSearch} appearance={appearance} onSignOut={onSignOut}
         onColumns={() => startDialog({ type: 'columns', tubeColumns: Boolean(server), fields: server ? tubeFields : serverFields, visible: server ? visibleTubeFields : visibleServerFields })} />
@@ -740,7 +744,7 @@ export default function Console({ appearance, onSignOut }) {
             : <Alert message="Loading sample…" />)
           : samplesPage ? <Samples resource={samples} servers={servers} onAction={startDialog} />
           : !serverKey ? (serversResource.data || loadingServers) && <ServerSummary {...{ servers, fields: visibleServerFields, revision, interval: polling, onAction: startDialog, personalEnabled: serversResource.data?.personalEnabled }} loading={loadingServers} />
-          : (server || resolvingServer) && !tube ? <>
+          : tubeList ? <>
             <div className="col-12 px-3 pb-3 bg-body rounded-3 rounded-top-0 tube-filter-bar">
               <div className="input-group">
                 <input type="text" className="form-control form-control-sm input-sm search-query shadow-none" id="searchTubes" name="searchTubes" placeholder="Search tubes"
@@ -753,11 +757,20 @@ export default function Console({ appearance, onSignOut }) {
               bulk={<BulkControls selected={active} visibleTubes={filtered} run={run} />} />
           </> : detail.data || loadingDetail ? <>
             {loadingDetail && !query && <span className="visually-hidden" role="status">Loading tube details…</span>}
-            <TubeTable tubes={detail.data ? [detail.data.stats] : []} fields={visibleTubeFields} detail loading={loadingDetail} />
+            <TubeTable tubes={detail.data ? [detail.data.stats] : []} fields={visibleTubeFields} detail loading={loadingDetail}
+              tubeName={tube} server={server || { endpoint: serverKey }} jumpToJobs={!query}
+              footer={!query && (detail.data
+                ? <TubeQueueActions key={server.id + ':' + tube} {...{ stats: detail.data.stats, server, tube, run }}>
+                  <TubeJobAddActions {...{ server, tube, samples: samples.data, onAction: startDialog }} />
+                </TubeQueueActions>
+                : <div className="queue-panel-tools queue-panel-footer" aria-hidden="true">
+                  {[0, 1, 2, 3].map(item => <span key={item} className="console-skeleton skeleton-button skeleton-name" />)}
+                  <span className="console-skeleton skeleton-button skeleton-name ms-auto" />
+                </div>)} />
             {query ? <SearchResults server={server || { endpoint: serverKey }}
               {...{ tube, query, results: search, settings, onAction: startDialog, onCopy: copy, next: scanNext, retry: reload }} />
               : detail.data ? <TubeJobs key={server.id + ':' + tube} detail={detail.data}
-                {...{ server, tube, samples: samples.data, onAction: startDialog, onCopy: copy, settings, run }} />
+                {...{ server, tube, onAction: startDialog, onCopy: copy, settings }} />
                 : <TubeJobsSkeleton />}
           </> : detail.error && <div className="mt-3"><p>{`Tube "${tube}" not found or it is empty`}</p><a href={locationFor(server)}>&lt;&lt; back</a></div>}
       </div>

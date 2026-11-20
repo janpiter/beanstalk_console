@@ -9,5 +9,6 @@ import './styles/vendor/magula.css';
 import './styles/styles.css';
 import './styles/theme.css';
 import './styles/preferences.css';
+import './styles/queue-tables.css';
 
 createRoot(document.getElementById('root')).render(<App />);
