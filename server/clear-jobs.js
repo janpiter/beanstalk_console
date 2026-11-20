@@ -32,12 +32,12 @@ export function createDeletionQueue() {
   };
 }
 
-export async function clearJobsInBatches(target, clearBatch, reportProgress) {
+export async function clearJobsInBatches(target, runBatch, reportProgress, verb = 'deleting') {
   let deleted = 0;
   while (deleted < target) {
     let result;
     try {
-      result = await clearBatch(Math.min(batchSize, target - deleted));
+      result = await runBatch(Math.min(batchSize, target - deleted));
     } catch (error) {
       return { deleted, error: error.message };
     }
@@ -45,7 +45,7 @@ export async function clearJobsInBatches(target, clearBatch, reportProgress) {
     if (result.error) return { deleted, error: result.error };
     if (deleted === target) return { deleted };
     if (!result.stopped) return { deleted, exhausted: true };
-    if (!result.affected) return { deleted, error: 'The batch stopped without deleting any jobs.' };
+    if (!result.affected) return { deleted, error: `The batch stopped without ${verb} any jobs.` };
     reportProgress(deleted);
   }
   return { deleted };

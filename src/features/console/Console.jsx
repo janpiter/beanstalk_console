@@ -71,11 +71,11 @@ function notifyTubeResults(operation, results) {
   });
 }
 
-function deletionProgress(operation) {
+function jobBatchProgress(operation, kicking) {
   return <TubeResultList>
-    {operation.tubes.map(({ tube, status, affected, stopped, error }) => <TubeResultItem key={tube} tube={tube}>
+    {operation.tubes.map(({ tube, status, affected, stopped, error, target = operation.target }) => <TubeResultItem key={tube} tube={tube}>
       {status === 'skipped' ? 'Already queued or running · skipped' : <>
-        <span className="console-tube-result-count">{affected.toLocaleString()} / {operation.target.toLocaleString()} deleted</span>
+        <span className="console-tube-result-count">{affected.toLocaleString()} / {target.toLocaleString()} {kicking ? 'kicked' : 'deleted'}</span>
         {status === 'queued' && ' · Queued'}
         {status === 'failed' && (' · ' + (error || 'Stopped at timeout'))}
         {status === 'done' && (stopped === 'limit' ? ' · Limit reached' : ' · No more matching jobs')}
@@ -239,7 +239,7 @@ export default function Console({ appearance, onSignOut }) {
   const [visibleTubeFields, setTubeFields] = useState(() => preference('tube-columns', legacyCookie('tubefilter')?.split(',') || tubeFields.slice(0, 9)));
   const [revision, setRevision] = useState(0);
   const [filter, setFilter] = useState(() => params.get('filter') || '');
-  const [selected, setSelected] = useState([]);
+  const [selection, setSelection] = useState(() => new Map());
   const [dialog, setDialog] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -272,6 +272,7 @@ export default function Console({ appearance, onSignOut }) {
   const tubes = [...(overview.data?.tubes || [])].sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
   const matcher = filterPattern(filter);
   const filtered = matcher ? tubes.filter(item => matcher.test(item.name)) : tubes;
+  const selected = [...selection.keys()];
   const active = selected.filter(name => tubes.some(item => item.name === name));
   const reload = () => setRevision(value => value + 1);
 
@@ -331,7 +332,20 @@ export default function Console({ appearance, onSignOut }) {
     setDialog(value);
   }
   function select(names, checked) {
-    setSelected(previous => checked ? [...new Set([...previous, ...names])] : previous.filter(item => !names.includes(item)));
+    const statsByName = new Map(tubes.map(stats => [stats.name, stats]));
+    setSelection(previous => {
+      const next = new Map(previous);
+      for (const name of names) {
+        if (!checked) next.delete(name);
+        else if (!next.has(name) && statsByName.has(name)) {
+          const stats = statsByName.get(name);
+          const buried = Number(stats['current-jobs-buried']) || 0;
+          const total = states.reduce((sum, state) => sum + (Number(stats['current-jobs-' + state]) || 0), 0);
+          next.set(name, { buried, total });
+        }
+      }
+      return next;
+    });
   }
   function changePage(url) {
     currentURL.current = url;
@@ -339,7 +353,7 @@ export default function Console({ appearance, onSignOut }) {
     openedLegacyAction.current = false;
     setPageURL(url);
     setFilter(url.searchParams.get('filter') || '');
-    setSelected([]);
+    setSelection(new Map());
     setDialog(null);
     setError('');
   }
@@ -456,8 +470,12 @@ export default function Console({ appearance, onSignOut }) {
   const pauseSeconds = settings.pause < 1 ? 3600 : settings.pause;
 
   function run(operation, names, options = {}) {
+    const limits = !tube && (operation === 'clear' || operation === 'kick')
+      ? names.map(name => selection.get(name)[operation === 'kick' ? 'buried' : 'total'])
+      : undefined;
     startDialog({
       type: 'bulk', action: operation, tubes: names, state: options.state, fromTubeList: !tube,
+      limits,
       options: operation === 'pause' ? { seconds: pauseSeconds, ...options } : options,
     });
   }
@@ -486,42 +504,43 @@ export default function Console({ appearance, onSignOut }) {
     return results;
   }
 
-  async function clearInBackground(names, state, limit = 1000, batched = false) {
+  async function runJobBatch(names, { state, limit = 1000, batched = false, targets } = {}) {
     if (names.length === 0 || names.length > 50) {
       setError('Select 1–50 tubes');
       return;
     }
 
     const targetServer = dialog.server || server;
-    const url = queueURL(targetServer, 'deletions');
+    const kicking = dialog.action === 'kick';
+    const route = kicking ? 'kicks' : 'deletions';
     closeDialog();
     const version = pageVersion.current;
-    const toastId = toast.loading('Starting job deletion…', {
+    const toastId = toast.loading(kicking ? 'Starting job kick…' : 'Starting job deletion…', {
       description: names.length === 1 ? names[0] : names.length + ' selected tubes',
     });
     let operation;
     try {
-      operation = await request(url, {
-        method: 'POST', data: { tubes: names, state, limit, batched },
+      operation = await request(queueURL(targetServer, route), {
+        method: 'POST', data: targets ? { targets, state } : { tubes: names, state, limit, batched },
       });
       while (operation.tubes.some(entry => entry.status === 'queued' || entry.status === 'running')) {
-        toast.loading('Deleting jobs…', { id: toastId, description: deletionProgress(operation) });
+        toast.loading(kicking ? 'Kicking jobs…' : 'Deleting jobs…', { id: toastId, description: jobBatchProgress(operation, kicking) });
         await new Promise(resolve => setTimeout(resolve, 750));
-        operation = await request(queueURL(targetServer, 'deletions', operation.id));
+        operation = await request(queueURL(targetServer, route, operation.id));
       }
       const failed = operation.tubes.some(entry => entry.status === 'failed');
-      const limited = operation.tubes.some(entry => entry.status === 'skipped' || (!batched && entry.stopped === 'limit'));
+      const limited = operation.tubes.some(entry => entry.status === 'skipped' || (!targets && !batched && entry.stopped === 'limit'));
       const notify = failed ? toast.error : limited ? toast.warning : toast.success;
-      notify('Job deletion results', { id: toastId, description: deletionProgress(operation) });
-      if (tube && pageVersion.current === version && operation.tubes.some(entry => entry.tube === tube && entry.status === 'done')) {
+      notify(kicking ? 'Kick results' : 'Job deletion results', { id: toastId, description: jobBatchProgress(operation, kicking) });
+      if (!kicking && tube && pageVersion.current === version && operation.tubes.some(entry => entry.tube === tube && entry.status === 'done')) {
         const latest = await request(queueURL(targetServer, 'tubes', tube)).catch(() => null);
         if (pageVersion.current === version && (latest ? ['ready', 'reserved', 'delayed', 'buried'].every(
           name => !Number(latest.stats['current-jobs-' + name]),
         ) : !batched)) navigate(locationFor(targetServer));
       }
     } catch (failure) {
-      if (operation) toast.error('Job deletion status is unavailable', {
-        id: toastId, description: 'The server may still be deleting jobs. ' + failure.message,
+      if (operation) toast.error(kicking ? 'Kick status is unavailable' : 'Job deletion status is unavailable', {
+        id: toastId, description: 'The operation may still be running. ' + failure.message,
       });
       else toast.error(failure.message, { id: toastId });
     } finally {
@@ -559,15 +578,28 @@ export default function Console({ appearance, onSignOut }) {
 
   async function submit(form) {
     if (pending.current) return;
+    if (dialog.limits) {
+      const targets = [];
+      for (const [index, tube] of dialog.tubes.entries()) {
+        const value = form.get('jobLimit-' + index);
+        const limit = Number(value);
+        if (!value?.trim() || !Number.isSafeInteger(limit) || limit < 0 || limit > dialog.limits[index]) {
+          setError('Enter a whole number between 0 and the maximum for each tube.');
+          return;
+        }
+        if (limit > 0) targets.push({ tube, limit });
+      }
+      return runJobBatch(targets.map(entry => entry.tube), { state: dialog.state, targets });
+    }
     if (dialog.action === 'clear' && dialog.clearCount !== undefined) {
       const target = Number(form.get('clearCount'));
       if (!Number.isSafeInteger(target) || target < 1) {
         setError('Enter a positive whole number of jobs to delete.');
         return;
       }
-      return clearInBackground(dialog.tubes, dialog.state, target, true);
+      return runJobBatch(dialog.tubes, { state: dialog.state, limit: target, batched: true });
     }
-    if (dialog.action === 'clear') return clearInBackground(dialog.tubes, dialog.state || 'ready', dialog.options?.limit);
+    if (dialog.action === 'clear') return runJobBatch(dialog.tubes, { state: dialog.state || 'ready', limit: dialog.options?.limit });
     pending.current = true;
     setBusy(true);
     setError('');
@@ -718,7 +750,7 @@ export default function Console({ appearance, onSignOut }) {
               <div id="tubeCountInfo" className="form-text text-body-secondary mt-2" aria-live="polite">{loadingTubes ? 'Loading tubes…' : overview.data && (filter ? `${filtered.length} of ${tubes.length} tubes match · ${tubes.length} total tubes` : `${tubes.length} total tubes`)}</div>
             </div>
             <TubeTable tubes={filtered} fields={visibleTubeFields} server={server} selected={selected} onSelect={select} previous={overview.previousData?.tubes} loading={loadingTubes}
-              bulk={<BulkControls selected={active} allTubes={tubes} visibleTubes={filtered} run={run} />} />
+              bulk={<BulkControls selected={active} visibleTubes={filtered} run={run} />} />
           </> : detail.data || loadingDetail ? <>
             {loadingDetail && !query && <span className="visually-hidden" role="status">Loading tube details…</span>}
             <TubeTable tubes={detail.data ? [detail.data.stats] : []} fields={visibleTubeFields} detail loading={loadingDetail} />

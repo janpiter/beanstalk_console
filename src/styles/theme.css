@@ -802,12 +802,6 @@ body.page-all-tubes .navbar {
   --bs-btn-active-border-color: #d58c90;
 }
 
-:root[data-bs-theme="dark"] #tubeBulkActions .tube-kick-more > .form-control {
-  color: #e0e5e6;
-  background: #1d2427;
-  border-color: #616d70;
-}
-
 :root[data-bs-theme="dark"] #tubeBulkActions .tube-bulk-action-group + .tube-bulk-action-group {
   border-color: #596467;
 }

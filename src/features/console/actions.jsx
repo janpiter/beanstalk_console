@@ -149,19 +149,15 @@ const tubeActionDescriptions = {
 
 function TubeListActionSummary({ action }) {
   const { action: operation, tubes, options } = action;
-  const clearing = operation === 'clear';
   const pause = operation === 'pause';
   const duration = pause && (options.seconds === 3600 ? '1 hour' :
     new Intl.NumberFormat('en', { style: 'unit', unit: 'second', unitDisplay: 'long' }).format(options.seconds));
 
   return <div className="console-preference-form">
-    <p className={clearing ? 'console-job-delete-note mb-0' : 'small text-body-secondary mb-0'}>
-      {clearing && <Icon name="warning" weight="regular" />}
-      <span>{tubeActionDescriptions[operation]}</span>
-    </p>
-    {(pause || options.limit !== undefined) && <dl className="console-tube-action-detail">
-      <dt>{pause ? 'Pause duration' : 'Maximum jobs per tube'}</dt>
-      <dd>{pause ? duration : options.limit.toLocaleString()}</dd>
+    <p className="small text-body-secondary mb-0">{tubeActionDescriptions[operation]}</p>
+    {pause && <dl className="console-tube-action-detail">
+      <dt>Pause duration</dt>
+      <dd>{duration}</dd>
     </dl>}
     <section aria-labelledby="selected-tubes-heading">
       <h6 id="selected-tubes-heading" className="console-tube-action-heading">
@@ -171,6 +167,42 @@ function TubeListActionSummary({ action }) {
         {tubes.map(tube => <li key={tube}><Icon name="tube" weight="regular" /><span>{tube}</span></li>)}
       </ul>
     </section>
+  </div>;
+}
+
+function TubeJobLimits({ action, counts, setCounts }) {
+  const clearing = action.action === 'clear';
+  return <div className="console-preference-form">
+    <p className={clearing ? 'console-job-delete-note mb-0' : 'small text-body-secondary mb-0'}>
+      {clearing && <Icon name="warning" weight="regular" />}
+      <span>{tubeActionDescriptions[action.action]}</span>
+    </p>
+    <section aria-labelledby="selected-tube-limits">
+      <h6 id="selected-tube-limits" className="console-tube-action-heading">
+        {action.tubes.length} {action.tubes.length === 1 ? 'tube' : 'tubes'} selected
+      </h6>
+      <p className="small text-body-secondary mb-2">Limits use the job count when each tube was selected.</p>
+      <ul className="console-tube-action-list console-tube-limit-list">
+        {action.tubes.map((tube, index) => {
+          const id = 'jobLimit-' + index;
+          const max = action.limits[index];
+          return <li key={tube}>
+            <div>
+              <label htmlFor={id}>{tube}</label>
+              <div id={id + '-max'} className="text-body-secondary">Max. {max.toLocaleString()} jobs</div>
+            </div>
+            <input id={id} name={id} className="form-control form-control-sm" type="number" inputMode="numeric"
+              aria-label={'Job limit for ' + tube} aria-describedby={id + '-max'} min={0} max={max} step={1} required
+              readOnly={max === 0} value={counts[index]}
+              onChange={event => {
+                const value = event.target.value;
+                setCounts(previous => previous.map((count, item) => item === index ? value : count));
+              }} />
+          </li>;
+        })}
+      </ul>
+    </section>
+    <p className="small text-body-secondary mb-0">Set a limit to 0 to skip that tube.</p>
   </div>;
 }
 
@@ -290,6 +322,10 @@ function Settings({ settings }) {
 
 export function ActionDialog({ action, close, submit, settings, servers, tubes, busy, error, returnFocus }) {
   const [move, setMove] = useState('new');
+  const [counts, setCounts] = useState(() => action.limits?.map(String));
+  const validCounts = counts?.every((value, index) => value !== '' && Number.isSafeInteger(Number(value)) &&
+    Number(value) >= 0 && Number(value) <= action.limits[index]);
+  const total = validCounts ? counts.reduce((sum, count) => sum + BigInt(Number(count)), 0n) : null;
   const title = titleFor(action);
   const variant = action.pickDestination ? 'send' : action.clearCount !== undefined ? 'clear'
     : action.action === 'move' ? 'move' : action.fromTubeList ? 'tube-action' : action.type;
@@ -325,7 +361,8 @@ export function ActionDialog({ action, close, submit, settings, servers, tubes, 
           {action.type === 'columns' && <ColumnFilter fields={action.fields} visible={action.visible} tubeColumns={action.tubeColumns} />}
           {action.type === 'settings' && <Settings settings={settings} />}
           {action.type === 'bulk' && <>
-            {action.fromTubeList ? <TubeListActionSummary action={action} />
+            {action.limits ? <TubeJobLimits action={action} counts={counts} setCounts={setCounts} />
+              : action.fromTubeList ? <TubeListActionSummary action={action} />
               : action.action === 'move' ? <MoveJobFields action={action} tubes={tubes} mode={move} setMode={setMove} />
               : action.clearCount !== undefined ? <ClearJobFields action={action} />
               : action.action === 'clear' && action.state === 'all'
@@ -338,11 +375,14 @@ export function ActionDialog({ action, close, submit, settings, servers, tubes, 
           {error && <Alert error message={error} />}
         </fieldset></div>
         <DialogFooter>
+          {action.limits && <span className="console-tube-limit-total text-body-secondary" aria-live="polite">
+            {total === null ? 'Enter valid job limits' : <>Up to <strong className="text-body">{total.toLocaleString()}</strong> jobs</>}
+          </span>}
           <DialogClose asChild>
             <button type="button" className={preferenceIcon ? neutral : 'btn btn-secondary btn-sm'} disabled={busy}>{preferenceIcon ? 'Cancel' : 'Close'}</button>
           </DialogClose>
           <button type="submit" className={destructive ? 'btn btn-danger btn-sm' : success}
-            disabled={busy || (action.pickDestination && !servers.length)}>{busy ? (action.pickDestination ? 'Sending…' : 'Working…') : primary}</button>
+            disabled={busy || (action.pickDestination && !servers.length) || (action.limits && (!validCounts || total === 0n))}>{busy ? (action.pickDestination ? 'Sending…' : 'Working…') : primary}</button>
         </DialogFooter>
       </form>
     </DialogContent>

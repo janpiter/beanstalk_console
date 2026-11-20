@@ -88,8 +88,8 @@ function decodeCookies(request) {
 export function createApp(env = process.env) {
   const app = express();
   const api = express.Router();
-  const enqueueDeletion = createDeletionQueue();
-  const deletions = new Map();
+  const enqueueJobBatch = createDeletionQueue();
+  const jobBatches = new Map();
   const configured = new Map();
   const config = env.BEANSTALK_SERVERS ? env.BEANSTALK_SERVERS.split(',').map(value => value.trim()).filter(Boolean) : [];
   if (env.BEANSTALKD_HOST) config.unshift(`Default server=${env.BEANSTALKD_HOST}:${env.BEANSTALKD_PORT || 11300}`);
@@ -370,35 +370,50 @@ export function createApp(env = process.env) {
   }
   api.delete('/servers/:serverId/jobs/:id', queueRoute((request, queue) => changeJob(request, queue, 'delete', 'DELETED')));
   api.post('/servers/:serverId/jobs/:id/kick', queueRoute((request, queue) => changeJob(request, queue, 'kick-job', 'KICKED')));
-  api.post('/servers/:serverId/deletions', (request, response) => {
-    const { tubes, state = 'ready', limit, batched = false } = request.body || {};
-    const names = selectedTubes(tubes);
+  function startJobBatch(action, request, response) {
+    const { tubes, targets, limit, batched = false, state: deletionState = 'ready' } = request.body || {};
+    const state = action === 'kick' ? 'buried' : deletionState;
+    let useBatches = batched;
+    let entries;
+    let target;
     if (!states.includes(state) && state !== 'all') fail(400, 'Invalid job state');
-    if (typeof batched !== 'boolean' || (batched && names.length !== 1)) fail(400, 'Invalid deletion mode');
-    const target = integer(limit, 1000, 1, batched ? Number.MAX_SAFE_INTEGER : 1000);
+    if (targets !== undefined || action === 'kick') {
+      if (!Array.isArray(targets) || targets.length < 1 || targets.length > 50) fail(400, 'Select 1–50 tubes');
+      const names = selectedTubes(targets.map(entry => entry?.tube));
+      if (names.length !== targets.length) fail(400, 'Tube limits must be unique');
+      entries = targets.map(({ tube, limit }) => ({ tube, target: integer(limit, undefined, 1, Number.MAX_SAFE_INTEGER) }));
+      useBatches = true;
+    } else {
+      const names = selectedTubes(tubes);
+      if (typeof batched !== 'boolean' || (batched && names.length !== 1)) fail(400, 'Invalid deletion mode');
+      target = integer(limit, 1000, 1, batched ? Number.MAX_SAFE_INTEGER : 1000);
+      entries = names.map(tube => ({ tube }));
+    }
     const server = request.queueServer;
     const id = randomUUID();
     const operation = {
       id, state, target,
-      tubes: names.map(tube => ({ tube, status: 'queued', affected: 0 })),
+      tubes: entries.map(entry => ({ ...entry, status: 'queued', affected: 0 })),
     };
-    deletions.set(id, { serverId: server.id, operation });
+    jobBatches.set(id, { serverId: server.id, action, operation });
 
     const tasks = operation.tubes.map(entry => {
-      const clear = limit => {
+      const entryTarget = entry.target ?? target;
+      const runBatch = limit => {
         const previous = entry.affected;
-        return runTubeAction(server, entry.tube, 'clear', {
+        return runTubeAction(server, entry.tube, action, {
           state, limit, onProgress: count => { entry.affected = previous + count; },
         });
       };
-      const task = enqueueDeletion(server.id, entry.tube, async () => {
+      const task = enqueueJobBatch(server.id, entry.tube, async () => {
         entry.status = 'running';
-        if (!batched) return clear(target);
-        const result = await clearJobsInBatches(target, clear, affected => { entry.affected = affected; });
+        if (!useBatches) return runBatch(entryTarget);
+        const result = await clearJobsInBatches(entryTarget, runBatch, affected => { entry.affected = affected; },
+          action === 'kick' ? 'kicking' : 'deleting');
         return {
           affected: result.deleted,
           error: result.error,
-          stopped: result.deleted === target ? 'limit' : undefined,
+          stopped: result.deleted === entryTarget ? 'limit' : undefined,
         };
       });
       if (!task) {
@@ -411,16 +426,20 @@ export function createApp(env = process.env) {
       );
     });
     Promise.all(tasks).then(() => {
-      setTimeout(() => deletions.delete(id), 10 * 60 * 1000).unref();
+      setTimeout(() => jobBatches.delete(id), 10 * 60 * 1000).unref();
     });
     response.status(202).json(operation);
-  });
+  }
 
-  api.get('/servers/:serverId/deletions/:id', (request, response) => {
-    const deletion = deletions.get(request.params.id);
-    if (deletion?.serverId !== request.queueServer.id) fail(404, 'Deletion status is unavailable');
-    response.json(deletion.operation);
-  });
+  for (const [route, action, label] of [['deletions', 'clear', 'Deletion'], ['kicks', 'kick', 'Kick']]) {
+    const path = '/servers/:serverId/' + route;
+    api.post(path, (request, response) => startJobBatch(action, request, response));
+    api.get(path + '/:id', (request, response) => {
+      const entry = jobBatches.get(request.params.id);
+      if (!entry || entry.serverId !== request.queueServer.id || entry.action !== action) fail(404, label + ' status is unavailable');
+      response.json(entry.operation);
+    });
+  }
 
   api.post('/servers/:serverId/tube-actions', async (request, response) => {
     const { action, tubes, state = 'ready', limit, seconds, destination } = request.body || {};
@@ -435,7 +454,7 @@ export function createApp(env = process.env) {
     const server = request.queueServer;
     if (action === 'clear') {
       const results = await Promise.all(names.map(async tube => {
-        const task = enqueueDeletion(server.id, tube, () => runTubeAction(server, tube, action, options, deadline));
+        const task = enqueueJobBatch(server.id, tube, () => runTubeAction(server, tube, action, options, deadline));
         if (!task) return { tube, affected: 0, error: 'This tube already has a queued or running deletion' };
         try {
           return { tube, ...await task };

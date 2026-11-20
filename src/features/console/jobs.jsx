@@ -5,17 +5,15 @@ import { actionLocation, ActionLink, Alert, Divider, empty, Item, locationFor, M
 import { Icon } from '../../components/icon.jsx';
 import { FullPayload, PayloadEditor, PayloadViewer } from '../../components/payload.jsx';
 
-export function BulkControls({ selected, allTubes, visibleTubes, run }) {
-  const [count, setCount] = useState(1);
+export function BulkControls({ selected, visibleTubes, run }) {
   const barRef = useRef(null);
   const total = selected.length;
   const visible = total > 0;
   const hidden = selected.filter(name => !visibleTubes.some(item => item.name === name)).length;
-  const canKickAll = allTubes.some(tube => selected.includes(tube.name) && tube['current-jobs-buried'] > 0);
-  const [summary, setSummary] = useState({ total, hidden, canKickAll });
+  const [summary, setSummary] = useState({ total, hidden });
   // Keep the last visible contents in place while the bar fades out.
-  if (visible && (summary.total !== total || summary.hidden !== hidden || summary.canKickAll !== canKickAll)) {
-    setSummary({ total, hidden, canKickAll });
+  if (visible && (summary.total !== total || summary.hidden !== hidden)) {
+    setSummary({ total, hidden });
   }
 
   useLayoutEffect(() => {
@@ -33,7 +31,6 @@ export function BulkControls({ selected, allTubes, visibleTubes, run }) {
   }, [visible]);
 
   const disabled = summary.total > 50;
-  const kick = value => run('kick', selected, { state: 'buried', limit: value });
   return <div ref={barRef} id="tubeBulkActions" className="tube-bulk-actions" data-visible={visible} inert={!visible}>
     <div className="tube-bulk-info" aria-live="polite"><strong>{summary.total} {summary.total === 1 ? 'tube' : 'tubes'} selected{summary.hidden > 0 && ' (' + summary.hidden + ' hidden by filter)'}</strong>{disabled && ' · select up to 50'}</div>
     <div className="tube-bulk-controls">
@@ -41,19 +38,11 @@ export function BulkControls({ selected, allTubes, visibleTubes, run }) {
         <button type="button" className={neutral} disabled={disabled} onClick={() => run('pause', selected)}><Icon name="pause" weight="fill" /> Pause</button>
         <button type="button" className={neutral} disabled={disabled} onClick={() => run('resume', selected)}><Icon name="play" weight="fill" /> Resume</button>
       </div>
-      <div className="tube-bulk-action-group" role="group" aria-label="Kick buried jobs">
-        <button type="button" className={neutral} disabled={disabled} onClick={() => kick(1)}><Icon name="fastForward" weight="fill" /> Kick 1 job</button>
-        <form className="input-group input-group-sm tube-kick-more" onSubmit={event => { event.preventDefault(); kick(count); }}>
-          <input type="number" className="form-control console-inset" min="1" max="1000" required value={count} disabled={disabled}
-            aria-label="Number of jobs to kick per tube" onChange={event => setCount(event.target.valueAsNumber || '')} />
-          <button type="submit" className={neutral} disabled={disabled}><Icon name="skipForward" weight="fill" /> Kick more</button>
-        </form>
-        <button type="button" className={neutral} disabled={disabled || !summary.canKickAll}
-          onClick={() => kick(1000)}><Icon name="fastForward" weight="fill" /> Kick all jobs</button>
-      </div>
-      <div className="tube-bulk-action-group">
+      <div className="tube-bulk-action-group" role="group" aria-label="Job actions">
+        <button type="button" className={neutral} disabled={disabled}
+          onClick={() => run('kick', selected, { state: 'buried' })}><Icon name="fastForward" weight="fill" /> Kick jobs</button>
         <button type="button" className={neutral + ' console-danger-action'} disabled={disabled}
-          onClick={() => run('clear', selected, { state: 'all', limit: 1000 })}>
+          onClick={() => run('clear', selected, { state: 'all' })}>
           <Icon name="trashSimple" /> Clear jobs
         </button>
       </div>

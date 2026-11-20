@@ -228,6 +228,20 @@
 .console-tube-action-list .console-icon { align-self: flex-start; margin-top: .18em; color: var(--bs-secondary-color); }
 .console-tube-action-list:focus-visible { outline: 2px solid var(--console-focus); outline-offset: 2px; }
 
+.console-tube-limit-list { max-height: min(18rem, 42dvh); }
+
+.console-tube-limit-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 24%);
+  align-items: center;
+  gap: .65rem;
+  padding: .65rem .7rem;
+}
+
+.console-tube-limit-list label { font-weight: 600; }
+.console-tube-limit-list input { text-align: end; font-variant-numeric: tabular-nums; }
+.console-tube-limit-total { margin-inline-end: auto; font-size: .825rem; font-variant-numeric: tabular-nums; }
+
 @media (max-width: 575px) {
   .console-column-grid { grid-template-columns: minmax(0, 1fr); }
 }
