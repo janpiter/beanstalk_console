@@ -356,7 +356,7 @@ export function ServerSummary({ servers, fields, revision, interval, onAction, p
   </section>;
 }
 
-export function TubeTable({ tubes = [], fields, server, selected, onSelect, previous, bulk, tubeName, detail, loading, footer, jumpToJobs }) {
+export function TubeTable({ tubes = [], fields, server, selected, onSelect, previous, bulk, tubeName, detail, loading, headerSearch, footer, searchResults }) {
   const visibleSelected = tubes.filter(tube => selected?.includes(tube.name)).length;
   const selectRef = useRef(null);
   useEffect(() => {
@@ -372,10 +372,16 @@ export function TubeTable({ tubes = [], fields, server, selected, onSelect, prev
   return <section id="summaryTable" className="mt-4" aria-labelledby={detail ? 'tube-table-title' : undefined} aria-label={detail ? undefined : 'Tubes'}>
     {bulk}
     <div className={'queue-panel' + (detail ? '' : ' queue-list-panel')}>
-      {detail && <header className="queue-panel-header">
-        <h2 id="tube-table-title" className="queue-panel-title">{tubeName}</h2>
-        {server && <span className="queue-panel-context" title={server.label}><Icon name="server" /> {server.endpoint || server.label}</span>}
-        {pauseLeft > 0 && <span className="queue-stat-badge job-state-delayed" title={`${pauseLeft} seconds remaining`}><Icon name="pause" /> Paused</span>}
+      {detail && <header className="queue-panel-header queue-tube-header">
+        <a className="btn btn-sm queue-back-link" href={locationFor(server, searchResults ? tubeName : undefined)}
+          aria-label={searchResults ? 'Back to tube detail' : 'Back to tube list'}>
+          <Icon name="back" /> {searchResults ? 'Tube detail' : 'Tube list'}
+        </a>
+        <div className="queue-tube-identity">
+          <h2 id="tube-table-title" className="queue-panel-title">{tubeName}</h2>
+          {pauseLeft > 0 && <span className="queue-stat-badge job-state-delayed" title={`${pauseLeft} seconds remaining`}><Icon name="pause" /> Paused</span>}
+        </div>
+        {headerSearch}
       </header>}
         {hasStats && <div className="table-responsive" tabIndex={0} role="region" aria-label="Tube statistics">
           <table className={'table queue-table align-middle mb-0' + (detail ? ' queue-table-detail' : '')} aria-busy={loading || undefined}>
@@ -385,7 +391,7 @@ export function TubeTable({ tubes = [], fields, server, selected, onSelect, prev
                 checked={tubes.length > 0 && visibleSelected === tubes.length} disabled={tubes.length === 0} onChange={event => onSelect(tubes.map(tube => tube.name), event.target.checked)} /></th>
               <th scope="col" rowSpan={rowSpan} className="queue-identity">Tube name</th>
             </>}>
-              <StatHeaders fields={columns} starts={starts} descriptions={tubeFieldDescriptions} jumpToJobs={jumpToJobs && !loading} />
+              <StatHeaders fields={columns} starts={starts} descriptions={tubeFieldDescriptions} jumpToJobs={detail && !searchResults && !loading} />
             </StatHeaderRows></thead>
             <tbody>{loading ? Array.from({ length: detail ? 1 : 6 }, (_, row) => <SkeletonRow key={row} fields={columns} starts={starts} selection={!detail} identity={!detail} />)
               : tubes.length === 0 ? <tr><td colSpan={columns.length + 2} className="text-body-secondary text-center py-3">No tubes to display</td></tr> : tubes.map(tube => {

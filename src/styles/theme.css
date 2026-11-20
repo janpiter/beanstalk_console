@@ -103,6 +103,7 @@ body {
   --bs-navbar-color: var(--bs-secondary-color);
   --bs-navbar-hover-color: var(--bs-body-color);
   --bs-navbar-active-color: var(--console-accent-text);
+  box-shadow: var(--bs-box-shadow-sm);
 }
 
 .navbar .nav-link[aria-expanded="true"] {
@@ -258,7 +259,12 @@ body {
 
 .console-search-field > button.console-search-clear:hover { color: var(--console-accent-text); }
 
-.tube-job-search { flex: 1 1 14rem; min-width: 0; }
+.tube-job-search {
+  flex: 0 0 auto;
+  width: 14rem;
+  max-width: 100%;
+  margin-inline-start: auto;
+}
 .tube-job-search .input-group {
   flex-wrap: nowrap;
   border-radius: var(--bs-border-radius);
@@ -330,7 +336,7 @@ body {
 }
 
 @media (max-width: 575px) {
-  .tube-job-search { flex-basis: 100%; }
+  .tube-job-search { width: 100%; }
 }
 
 @media (min-width: 992px) {
@@ -338,7 +344,7 @@ body {
   .navbar .navigation-picker-tubes .navigation-picker-trigger { max-width: none; }
   .navbar:has(.navigation-picker-tubes) .navbar-collapse { min-width: 0; }
   .console-header-actions { flex: 0 0 auto; flex-wrap: nowrap; }
-  .tube-job-search { flex: 0 0 auto; width: clamp(10rem, 16vw, 16rem); }
+  .tube-job-search { width: clamp(10rem, 16vw, 16rem); }
 }
 
 #job-search-heading { scroll-margin-top: 5rem; }
@@ -718,7 +724,7 @@ body {
   box-shadow:
     inset 1px 0 var(--bs-border-color-translucent),
     inset -1px 0 var(--bs-border-color-translucent),
-    inset 0 1px var(--bs-border-color-translucent) !important;
+    inset 0 1px var(--bs-border-color-translucent);
 }
 
 .tube-filter-bar {

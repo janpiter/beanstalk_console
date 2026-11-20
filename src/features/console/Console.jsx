@@ -177,7 +177,22 @@ function ClearableSearch({ value, onValueChange, defaultValue = '', clearLabel, 
   </div>;
 }
 
-function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, loadingTubes, serversError, tubesError, query, state, samplesPage, onSearch, onAction, refresh, changeRefresh, onColumns, searchLimit, appearance, onSignOut }) {
+function TubeJobSearch({ server, tube, query, state, limit, onSearch }) {
+  return <form className="tube-job-search" role="search" aria-label="Search jobs in this tube" action="./" method="get" onSubmit={onSearch}>
+    <input type="hidden" name="server" value={server.endpoint} />
+    <input type="hidden" name="tube" value={tube} />
+    <input type="hidden" name="state" value={state} />
+    <input type="hidden" name="action" value="search" />
+    <input type="hidden" name="limit" value={limit} />
+    <div className="input-group input-group-sm">
+      <ClearableSearch className="form-control form-control-sm" name="searchStr" placeholder="Search jobs" aria-label="Search jobs in this tube"
+        clearLabel="Clear job search" defaultValue={query} maxLength={1000} required />
+      <button type="submit" className="btn btn-sm console-icon-button console-header-search-button" aria-label="Search jobs" title="Search jobs"><Icon name="search" weight="regular" /></button>
+    </div>
+  </form>;
+}
+
+function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, loadingTubes, serversError, tubesError, samplesPage, onAction, refresh, changeRefresh, onColumns, appearance, onSignOut }) {
   const [expanded, setExpanded] = useState(false);
   const availableServers = server && !servers.some(item => item.id === server.id) ? [...servers, server] : servers;
   const serverOptions = [{ id: '', label: 'All servers', href: './?' }, ...availableServers.map(item => ({
@@ -189,7 +204,7 @@ function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, lo
   const tubeOptions = [{ id: '', label: 'All tubes', href: locationFor(server) }, ...tubeNames.map(name => ({
     id: name, label: name, href: locationFor(server, name),
   }))];
-  return <nav className={'navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3 shadow-sm' + (tubeList ? ' navbar-with-tube-filter rounded-bottom-0' : '')} aria-label="Main navigation">
+  return <nav className={'navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3' + (tubeList ? ' navbar-with-tube-filter rounded-bottom-0' : '')} aria-label="Main navigation">
     <div className={'container-fluid' + (tubeList ? ' px-3' : '')}>
       <a className="navbar-brand" href="./?"><img src={logo} alt="" width="22" height="22" className="rounded-circle mb-1" />{' '}<span>Beanstalk Console</span></a>
       <button type="button" className="border-0 btn btn-sm navbar-toggler legacy-toggler" aria-expanded={expanded} aria-controls="navbarSupportedContent" aria-label="Toggle navigation" onClick={() => setExpanded(!expanded)}><Icon name="menu" /></button>
@@ -201,16 +216,6 @@ function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, lo
             selected={tube || ''} loading={loadingTubes} unavailable={Boolean(tubesError)} /></li>}
         </ul>
         <div className="console-header-actions">
-          {server && tube && <form key={server.id + ':' + tube + ':' + query} className="tube-job-search" role="search" aria-label="Search jobs in this tube" action="./" method="get" onSubmit={onSearch}>
-            <input type="hidden" name="server" value={server.endpoint} /><input type="hidden" name="tube" value={tube} />
-            <input type="hidden" name="state" value={state} /><input type="hidden" name="action" value="search" />
-            <input type="hidden" name="limit" value={searchLimit} />
-            <div className="input-group input-group-sm">
-              <ClearableSearch className="form-control form-control-sm" name="searchStr" placeholder="Search jobs" aria-label="Search jobs in this tube"
-                clearLabel="Clear job search" defaultValue={query} maxLength={1000} required />
-              <button type="submit" className="btn btn-sm console-icon-button console-header-search-button" aria-label="Search jobs" title="Search jobs"><Icon name="search" weight="regular" /></button>
-            </div>
-          </form>}
           <div className="console-header-controls" role="group" aria-label="Console controls">
             <Menu button="btn btn-sm console-settings-button" end title="Settings" label={<>
               <Icon name="settings" weight="regular" />
@@ -747,9 +752,9 @@ export default function Console({ appearance, onSignOut }) {
   return <div onClick={followLink}>
     <Toaster theme={appearance.resolvedTheme} />
     <div className="container-fluid">
-      <Navigation {...{ servers, server, tubes, tube, tubeList, loadingServers, loadingTubes, query, samplesPage, onAction: startDialog, refresh, changeRefresh, searchLimit: settings.searchLimit }}
+      <Navigation {...{ servers, server, tubes, tube, tubeList, loadingServers, loadingTubes, samplesPage, onAction: startDialog, refresh, changeRefresh }}
         serversError={serversResource.error} tubesError={overview.error}
-        state={params.get('state') || ''} onSearch={submitSearch} appearance={appearance} onSignOut={onSignOut}
+        appearance={appearance} onSignOut={onSignOut}
         onColumns={() => startDialog({ type: 'columns', tubeColumns: Boolean(server), fields: server ? tubeFields : serverFields, visible: server ? visibleTubeFields : visibleServerFields })} />
       <div className="mx-3">
         {serversResource.error && <Alert error message={serversResource.error} />}
@@ -771,7 +776,9 @@ export default function Console({ appearance, onSignOut }) {
           </> : detail.data || loadingDetail ? <>
             {loadingDetail && !query && <span className="visually-hidden" role="status">Loading tube details…</span>}
             <TubeTable tubes={detail.data ? [detail.data.stats] : []} fields={visibleTubeFields} detail loading={loadingDetail}
-              tubeName={tube} server={server || { endpoint: serverKey }} jumpToJobs={!query}
+              tubeName={tube} server={server || { endpoint: serverKey }} searchResults={Boolean(query)}
+              headerSearch={server && <TubeJobSearch key={server.id + ':' + tube + ':' + query} {...{ server, tube, query }}
+                state={params.get('state') || ''} limit={settings.searchLimit} onSearch={submitSearch} />}
               footer={!query && (detail.data
                 ? <TubeQueueActions key={server.id + ':' + tube} {...{ stats: detail.data.stats, server, tube, run }}>
                   <TubeJobAddActions {...{ server, tube, samples: samples.data, onAction: startDialog }} />
@@ -780,8 +787,7 @@ export default function Console({ appearance, onSignOut }) {
                   {[0, 1, 2, 3].map(item => <span key={item} className="console-skeleton skeleton-button skeleton-name" />)}
                   <span className="console-skeleton skeleton-button skeleton-name ms-auto" />
                 </div>)} />
-            {query ? <SearchResults server={server || { endpoint: serverKey }}
-              {...{ tube, query, results: search, settings, onAction: startDialog, onCopy: copy, next: scanNext, retry: reload }} />
+            {query ? <SearchResults {...{ tube, query, results: search, settings, onAction: startDialog, onCopy: copy, next: scanNext, retry: reload }} />
               : detail.data ? <TubeJobs key={server.id + ':' + tube} detail={detail.data}
                 {...{ server, tube, onAction: startDialog, onCopy: copy, settings }} />
                 : <TubeJobsSkeleton />}

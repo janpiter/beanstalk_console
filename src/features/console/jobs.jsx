@@ -393,7 +393,7 @@ function SearchSkeletonRows() {
   </tr>);
 }
 
-export function SearchResults({ server, tube, query, results, settings, onAction, onCopy, next, retry }) {
+export function SearchResults({ tube, query, results, settings, onAction, onCopy, next, retry }) {
   const heading = useRef(null);
   const [openPayload, setOpenPayload] = useState(null);
   const { data, error } = results;
@@ -408,7 +408,6 @@ export function SearchResults({ server, tube, query, results, settings, onAction
             {' · '}{data.scanned.toLocaleString()} IDs scanned
           </>}</span>
         </p>
-        <a className={neutral + ' ms-auto'} href={locationFor(server, tube)}><Icon name="back" /> Back to tube</a>
       </header>
       {error && <div className="queue-panel-tools">
         <div className="text-danger-emphasis" role="alert">Search failed. {error}</div>
