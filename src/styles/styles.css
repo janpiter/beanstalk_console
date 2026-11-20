@@ -256,6 +256,35 @@ button.nav-link {
   overscroll-behavior: contain;
 }
 
+.console-tube-result-list {
+  margin: .45rem 0 0;
+  padding-inline-start: 1.5rem;
+  list-style: decimal outside;
+}
+
+.console-tube-result-list li + li {
+  margin-top: .375rem;
+  padding-top: .375rem;
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.console-tube-result-list li::marker {
+  color: var(--bs-secondary-color);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.console-tube-result-name {
+  color: var(--bs-body-color);
+  font-weight: 600;
+}
+
+.console-tube-result-status {
+  margin-top: .1rem;
+}
+
+.console-tube-result-count { font-variant-numeric: tabular-nums; }
+
 .console-toaster[data-sonner-toaster] {
   pointer-events: none;
 }
@@ -264,7 +293,7 @@ button.nav-link {
   pointer-events: auto;
 }
 
-.console-toast[data-type="loading"] .console-toast-icon {
+.console-toast[data-type="loading"]:not(:has(.console-tube-result-list)) .console-toast-icon {
   align-self: center;
 }
 

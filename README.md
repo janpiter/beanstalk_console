@@ -17,7 +17,11 @@ The application runs with Node.js and beanstalkd.
 
 ## Run locally
 
-Use Node.js 22.12 or newer. With a beanstalkd instance listening on port 11300:
+Use Node.js 22.12 or newer. The console connects to a separate beanstalkd
+daemon; configure binlog on that daemon if jobs must survive restarts. For a
+local systemd-managed daemon, see [the example service](deploy/beanstalkd.service.example).
+
+With a persistent beanstalkd instance listening on port 11300:
 
 ```sh
 npm ci
@@ -78,7 +82,33 @@ interfaces (`0.0.0.0`). Set `CONSOLE_BIND=127.0.0.1` for host-only access or
 use `CONSOLE_PORT` to change the published port. The `console_data` volume
 holds samples, browser server lists, and the shared-link registry under
 `/data`. Run `docker compose up -d --build web` after updating the console
-source to rebuild the frontend and Node backend together.
+source to rebuild the frontend and Node backend together. The beanstalkd
+service writes its binlog to the `beanstalkd_data` volume and uses `-f 0` to
+sync every binlog write. Its restart policy starts it again after a host
+restart. Keep the named volume: `docker compose down -v` removes it and its
+binlog.
+
+### Non-Docker beanstalkd
+
+The Node app does not start or configure beanstalkd. Install beanstalkd on the
+queue host and configure its service to start with a binlog directory. The
+example unit listens on loopback and stores the binlog in
+`/var/lib/beanstalkd`; adjust the listen address, binary path, or service user
+for your operating system if needed. Install and enable it with:
+
+```sh
+sudo install -m 0644 deploy/beanstalkd.service.example /etc/systemd/system/beanstalkd.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now beanstalkd
+```
+
+The unit uses `-b /var/lib/beanstalkd` to enable binlog and `-f 0` to sync
+each write for stronger durability. Syncing each write can reduce throughput.
+Point `BEANSTALKD_HOST` or `BEANSTALK_SERVERS` at this daemon.
+
+Enabling binlog does not recover jobs that were created before binlog was
+enabled. If a daemon is currently running without binlog, drain or migrate its
+existing jobs before restarting it with this configuration.
 
 If you already have a `storage.json` backup, you can import it into an empty
 volume with this command:

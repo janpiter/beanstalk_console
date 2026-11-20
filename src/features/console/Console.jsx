@@ -45,32 +45,43 @@ function carryAutoRefresh(url, enabled) {
 const postAction = (name, server, tube, params, data) =>
   request(actionLocation(server, tube, name, params), { method: 'POST', data });
 
+function TubeResultList({ children }) {
+  return <ol className="console-toast-details console-tube-result-list">{children}</ol>;
+}
+
+function TubeResultItem({ tube, children }) {
+  return <li>
+    <div className="console-tube-result-name">{tube}</div>
+    <div className="console-tube-result-status">{children}</div>
+  </li>;
+}
+
 function notifyTubeResults(operation, results) {
   const failed = results.some(item => item.error || item.stopped === 'timeout');
   const notify = failed ? toast.error : toast.success;
   notify(nameOf(operation) + ' results', {
-    description: <ul className="console-toast-details mb-0 ps-3">
-      {results.map(item => <li key={item.tube}>
-        {item.tube} · {item.affected} affected
+    description: <TubeResultList>
+      {results.map(item => <TubeResultItem key={item.tube} tube={item.tube}>
+        <span className="console-tube-result-count">{item.affected.toLocaleString()} affected</span>
         {item.error && ' · ' + item.error}
         {item.stopped && ' · stopped at ' + item.stopped}
         {item.pendingCopy && ' · destination job #' + item.pendingCopy.destinationId + ' created; source deletion unconfirmed'}
-      </li>)}
-    </ul>,
+      </TubeResultItem>)}
+    </TubeResultList>,
   });
 }
 
 function deletionProgress(operation) {
-  return <ul className="console-toast-details mb-0 ps-3">
-    {operation.tubes.map(({ tube, status, affected, stopped, error }) => <li key={tube}>
-      {tube} · {status === 'skipped' ? 'Already queued or running · skipped' : <>
-        {affected.toLocaleString()} / {operation.target.toLocaleString()} deleted
+  return <TubeResultList>
+    {operation.tubes.map(({ tube, status, affected, stopped, error }) => <TubeResultItem key={tube} tube={tube}>
+      {status === 'skipped' ? 'Already queued or running · skipped' : <>
+        <span className="console-tube-result-count">{affected.toLocaleString()} / {operation.target.toLocaleString()} deleted</span>
         {status === 'queued' && ' · Queued'}
         {status === 'failed' && (' · ' + (error || 'Stopped at timeout'))}
         {status === 'done' && (stopped === 'limit' ? ' · Limit reached' : ' · No more matching jobs')}
       </>}
-    </li>)}
-  </ul>;
+    </TubeResultItem>)}
+  </TubeResultList>;
 }
 
 function filterPattern(value) {
@@ -567,6 +578,7 @@ export default function Console({ appearance, onSignOut }) {
     const version = pageVersion.current;
     try {
       let message;
+      let description;
       switch (dialog.type) {
         case 'settings': {
           const next = { pause: number('tubePauseSeconds'),
@@ -632,7 +644,11 @@ export default function Console({ appearance, onSignOut }) {
           message = 'Job deleted'; break;
         case 'kickJob':
           await postAction('kickJob', server, tube, { jobid: dialog.job.id, state: dialog.job.stats?.state });
-          message = 'Job kicked'; break;
+          message = 'Job kicked';
+          description = <TubeResultList>
+            <TubeResultItem tube={tube}>Job #{dialog.job.id}</TubeResultItem>
+          </TubeResultList>;
+          break;
         case 'bulk': {
           const mode = get('destinationMode');
           const operation = mode === '$buried' ? 'bury' : dialog.action;
@@ -654,7 +670,7 @@ export default function Console({ appearance, onSignOut }) {
       }
       reload();
       if (pageVersion.current !== version) return;
-      if (message) toast.success(message);
+      if (message) toast.success(message, { description });
       if (server && tube && dialog.type === 'deleteJob') {
         const latest = await request(queueURL(server, 'tubes', tube)).catch(() => null);
         if (pageVersion.current !== version) return;

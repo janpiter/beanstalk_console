@@ -16,6 +16,9 @@ services:
       - beanstalkd
   beanstalkd:
     image: dinamic/docker-alpine-beanstalkd
+    entrypoint: ["beanstalkd"]
+    command: ["-p", "11300", "-b", "/var/lib/beanstald", "-f", "0"]
+    restart: unless-stopped
     volumes:
       - beanstalkd_data:/var/lib/beanstald
 

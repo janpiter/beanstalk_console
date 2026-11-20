@@ -1,0 +1,16 @@
+[Unit]
+Description=Beanstalkd persistent job queue
+After=network.target
+
+[Service]
+Type=simple
+User=beanstalkd
+Group=beanstalkd
+StateDirectory=beanstalkd
+StateDirectoryMode=0750
+ExecStart=/usr/bin/beanstalkd -l 127.0.0.1 -p 11300 -b /var/lib/beanstalkd -f 0
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target
