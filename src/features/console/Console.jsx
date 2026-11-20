@@ -162,6 +162,21 @@ function SignOutAction({ onSignOut }) {
   </li>;
 }
 
+function ClearableSearch({ value, onValueChange, defaultValue = '', clearLabel, ...inputProps }) {
+  const [draft, setDraft] = useState(defaultValue);
+  const input = useRef(null);
+  const text = value ?? draft;
+  const change = onValueChange ?? setDraft;
+  return <div className="console-search-field">
+    <input {...inputProps} ref={input} type="search" autoComplete="off" value={text} onChange={event => change(event.target.value)} />
+    {text !== '' && <button type="button" className="console-search-clear" aria-label={clearLabel} title={clearLabel}
+      onClick={() => {
+        change('');
+        input.current?.focus();
+      }}><Icon name="close" /></button>}
+  </div>;
+}
+
 function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, loadingTubes, serversError, tubesError, query, state, samplesPage, onSearch, onAction, refresh, changeRefresh, onColumns, searchLimit, appearance, onSignOut }) {
   const [expanded, setExpanded] = useState(false);
   const availableServers = server && !servers.some(item => item.id === server.id) ? [...servers, server] : servers;
@@ -175,7 +190,7 @@ function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, lo
     id: name, label: name, href: locationFor(server, name),
   }))];
   return <nav className={'navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3 shadow-sm' + (tubeList ? ' navbar-with-tube-filter rounded-bottom-0' : '')} aria-label="Main navigation">
-    <div className="container-fluid">
+    <div className={'container-fluid' + (tubeList ? ' px-3' : '')}>
       <a className="navbar-brand" href="./?"><img src={logo} alt="" width="22" height="22" className="rounded-circle mb-1" />{' '}<span>Beanstalk Console</span></a>
       <button type="button" className="border-0 btn btn-sm navbar-toggler legacy-toggler" aria-expanded={expanded} aria-controls="navbarSupportedContent" aria-label="Toggle navigation" onClick={() => setExpanded(!expanded)}><Icon name="menu" /></button>
       <div className={'collapse navbar-collapse' + (expanded ? ' show' : '')} id="navbarSupportedContent">
@@ -191,7 +206,8 @@ function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, lo
             <input type="hidden" name="state" value={state} /><input type="hidden" name="action" value="search" />
             <input type="hidden" name="limit" value={searchLimit} />
             <div className="input-group input-group-sm">
-              <input type="search" className="form-control" name="searchStr" placeholder="Search jobs" aria-label="Search jobs in this tube" defaultValue={query} maxLength={1000} required />
+              <ClearableSearch className="form-control form-control-sm" name="searchStr" placeholder="Search jobs" aria-label="Search jobs in this tube"
+                clearLabel="Clear job search" defaultValue={query} maxLength={1000} required />
               <button type="submit" className="btn btn-sm console-icon-button console-header-search-button" aria-label="Search jobs" title="Search jobs"><Icon name="search" weight="regular" /></button>
             </div>
           </form>}
@@ -209,7 +225,7 @@ function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, lo
                 <Icon name="advancedSettings" weight="regular" /> <span className="me-auto">Advanced settings</span>
                 <Icon name="caretRight" />
               </Item>
-              {(onSignOut) && <Divider />}
+              <Divider />
               <Item newTab href="https://github.com/beanstalkd/beanstalkd">Beanstalk (github) <Icon name="externalLink" /></Item>
               <Item newTab href="https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt">Protocol Specification <Icon name="externalLink" /></Item>
               {onSignOut && <><Divider /><SignOutAction onSignOut={onSignOut} /></>}
@@ -746,11 +762,8 @@ export default function Console({ appearance, onSignOut }) {
           : !serverKey ? (serversResource.data || loadingServers) && <ServerSummary {...{ servers, fields: visibleServerFields, revision, interval: polling, onAction: startDialog, personalEnabled: serversResource.data?.personalEnabled }} loading={loadingServers} />
           : tubeList ? <>
             <div className="col-12 px-3 pb-3 bg-body rounded-3 rounded-top-0 tube-filter-bar">
-              <div className="input-group">
-                <input type="text" className="form-control form-control-sm input-sm search-query shadow-none" id="searchTubes" name="searchTubes" placeholder="Search tubes"
-                  aria-label="Search tubes" value={filter} onChange={event => filterTubes(event.target.value)} />
-                {filter && <button type="button" className="btn clear-search" aria-label="Clear filter" onClick={() => { filterTubes(''); document.getElementById('searchTubes')?.focus(); }}>×</button>}
-              </div>
+              <ClearableSearch className="form-control form-control-sm input-sm search-query shadow-none" id="searchTubes" name="searchTubes" placeholder="Search tubes"
+                aria-label="Search tubes" clearLabel="Clear tube filter" value={filter} onValueChange={filterTubes} />
               <div id="tubeCountInfo" className="form-text text-body-secondary mt-2" aria-live="polite">{loadingTubes ? 'Loading tubes…' : overview.data && (filter ? `${filtered.length} of ${tubes.length} tubes match · ${tubes.length} total tubes` : `${tubes.length} total tubes`)}</div>
             </div>
             <TubeTable tubes={filtered} fields={visibleTubeFields} server={server} selected={selected} onSelect={select} previous={overview.previousData?.tubes} loading={loadingTubes}
