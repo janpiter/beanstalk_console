@@ -2,7 +2,8 @@
 
 A beanstalkd administration console built with React, Vite, and Node.js. The
 browser uses a same-origin JSON API, and Node connects to beanstalkd over TCP.
-The application runs with Node.js and beanstalkd.
+The console can start on its own. Managing queues requires access to a running
+beanstalkd instance.
 
 ## Project layout
 
@@ -17,11 +18,7 @@ The application runs with Node.js and beanstalkd.
 
 ## Run locally
 
-Use Node.js 22.12 or newer. The console connects to a separate beanstalkd
-daemon; configure binlog on that daemon if jobs must survive restarts. For a
-local systemd-managed daemon, see [the example service](deploy/beanstalkd.service.example).
-
-With a persistent beanstalkd instance listening on port 11300:
+Use Node.js 22.12 or newer. These commands start only the console:
 
 ```sh
 npm ci
@@ -29,9 +26,9 @@ npm run build
 npm start
 ```
 
-Open <http://127.0.0.1:3080>. For a different queue server or several configured
-servers, set a comma-separated server list in the checkout's `.env` file or
-pass it when starting the console:
+Open <http://127.0.0.1:3080>. To connect to an existing queue server, use
+**Add server** in the console or set `BEANSTALK_SERVERS` in `.env`. You can
+also pass a comma-separated list when starting the console:
 
 ```sh
 BEANSTALK_SERVERS='Local=127.0.0.1:11300,Workers=workers.internal:11300' npm start
@@ -71,6 +68,20 @@ parent must already exist and be writable. The default storage files and
 lists, samples, and shared links across deployments.
 
 ## Docker Compose
+
+### Console only
+
+```sh
+docker compose up -d --build --no-deps web
+```
+
+`--no-deps` tells Compose to skip starting the bundled `beanstalkd` service.
+Open <http://127.0.0.1:3080> and add an existing server with **Add server**, or
+set `BEANSTALK_SERVERS=Workers=workers.internal:11300` in `.env` before starting
+the container. Use an address reachable from the `web` container. The built-in
+**Default server** will show a connection error if the bundled service is down.
+
+### Console with bundled Beanstalkd
 
 ```sh
 docker compose up --build
