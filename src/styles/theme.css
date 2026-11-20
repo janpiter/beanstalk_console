@@ -315,7 +315,7 @@ body {
 .job-search-table tbody tr:last-child > * { border-bottom: 0; }
 .job-search-id { width: 7.5rem; }
 .job-search-state-column { width: 6.25rem; }
-.job-search-actions-column { width: 12rem; }
+.job-search-actions-column { width: 15rem; }
 
 .job-search-skeleton-state {
   width: 3.5rem;
@@ -755,6 +755,63 @@ body.page-all-tubes .navbar {
   --bs-btn-active-border-color: var(--bs-danger-border-subtle);
 }
 
+:root[data-bs-theme="dark"] #tubeBulkActions {
+  color: #e6e9e9;
+  isolation: isolate;
+  background: transparent;
+  border-color: #707b7e;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 48%);
+}
+
+:root[data-bs-theme="dark"] #tubeBulkActions::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background: rgb(36 43 46 / 78%);
+  content: "";
+  pointer-events: none;
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+}
+
+:root[data-bs-theme="dark"] #tubeBulkActions .console-neutral {
+  --bs-btn-color: #e0e5e6;
+  --bs-btn-bg: #2b3336;
+  --bs-btn-border-color: #616d70;
+  --bs-btn-hover-color: #f2f4f4;
+  --bs-btn-hover-bg: #3b4548;
+  --bs-btn-hover-border-color: #8b989a;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #465154;
+  --bs-btn-active-border-color: #aab4b6;
+  --bs-btn-disabled-color: #909a9c;
+  --bs-btn-disabled-bg: #292f32;
+  --bs-btn-disabled-border-color: #4b5558;
+}
+
+:root[data-bs-theme="dark"] #tubeBulkActions .console-danger-action {
+  --bs-btn-color: #f19a9e;
+  --bs-btn-bg: #351f23;
+  --bs-btn-border-color: #8e4a50;
+  --bs-btn-hover-color: #ffdfe0;
+  --bs-btn-hover-bg: #512d32;
+  --bs-btn-hover-border-color: #c7797e;
+  --bs-btn-active-color: #ffe9ea;
+  --bs-btn-active-bg: #65383e;
+  --bs-btn-active-border-color: #d58c90;
+}
+
+:root[data-bs-theme="dark"] #tubeBulkActions .tube-kick-more > .form-control {
+  color: #e0e5e6;
+  background: #1d2427;
+  border-color: #616d70;
+}
+
+:root[data-bs-theme="dark"] #tubeBulkActions .tube-bulk-action-group + .tube-bulk-action-group {
+  border-color: #596467;
+}
+
 .btn-success {
   --bs-btn-bg: #176a50;
   --bs-btn-border-color: #176a50;
@@ -786,7 +843,8 @@ body.page-all-tubes .navbar {
   outline-offset: 2px;
 }
 
-.form-check-input:checked {
+.form-check-input:checked,
+.form-check-input[type="checkbox"]:indeterminate {
   background-color: #176a50;
   border-color: #176a50;
 }

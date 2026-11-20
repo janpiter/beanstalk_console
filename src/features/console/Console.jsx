@@ -190,16 +190,17 @@ function Navigation({ servers, server, tubes, tube, loadingServers, loadingTubes
               <span>Settings</span>
               <Icon name="caretDown" className="console-settings-caret" />
             </>}>
-              {!samplesPage && <Item onClick={onColumns}>Filter columns</Item>}
-              <Item href="./?action=manageSamples">Manage samples</Item>
+              {!samplesPage && <Item onClick={onColumns}><Icon name="listChecks" weight="regular" /> Filter columns</Item>}
+              <Item href="./?action=manageSamples"><Icon name="file" weight="regular" /> Manage samples</Item>
               <Divider />
-              <Item newTab href="https://github.com/beanstalkd/beanstalkd">Beanstalk (github) <Icon name="externalLink" /></Item>
-              <Item newTab href="https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt">Protocol Specification <Icon name="externalLink" /></Item>
-              <Divider /><QuickSettings {...appearance} refresh={refresh} changeRefresh={samplesPage ? null : changeRefresh} />
+              <QuickSettings {...appearance} refresh={refresh} changeRefresh={samplesPage ? null : changeRefresh} />
               <Divider /><Item onClick={() => onAction({ type: 'settings' })}>
                 <Icon name="advancedSettings" weight="regular" /> <span className="me-auto">Advanced settings</span>
                 <Icon name="caretRight" />
               </Item>
+              {(onSignOut) && <Divider />}
+              <Item newTab href="https://github.com/beanstalkd/beanstalkd">Beanstalk (github) <Icon name="externalLink" /></Item>
+              <Item newTab href="https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt">Protocol Specification <Icon name="externalLink" /></Item>
               {onSignOut && <><Divider /><SignOutAction onSignOut={onSignOut} /></>}
             </Menu>
           </div>
@@ -706,7 +707,7 @@ export default function Console({ appearance, onSignOut }) {
             {loadingDetail && !query && <span className="visually-hidden" role="status">Loading tube details…</span>}
             <TubeTable tubes={detail.data ? [detail.data.stats] : []} fields={visibleTubeFields} detail loading={loadingDetail} />
             {query ? <SearchResults server={server || { endpoint: serverKey }}
-              {...{ tube, query, results: search, settings, onAction: startDialog, next: scanNext, retry: reload }} />
+              {...{ tube, query, results: search, settings, onAction: startDialog, onCopy: copy, next: scanNext, retry: reload }} />
               : detail.data ? <TubeJobs key={server.id + ':' + tube} detail={detail.data}
                 {...{ server, tube, samples: samples.data, onAction: startDialog, onCopy: copy, settings, run }} />
                 : <TubeJobsSkeleton />}

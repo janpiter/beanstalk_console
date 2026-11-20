@@ -392,11 +392,12 @@ function SearchSkeletonRows() {
     <td><div className="d-flex justify-content-end gap-1">
       <Skeleton className="skeleton-button job-search-payload-toggle" />
       <Skeleton className="skeleton-button skeleton-actions" />
+      <Skeleton className="skeleton-button skeleton-actions" />
     </div></td>
   </tr>);
 }
 
-export function SearchResults({ server, tube, query, results, settings, onAction, next, retry }) {
+export function SearchResults({ server, tube, query, results, settings, onAction, onCopy, next, retry }) {
   const heading = useRef(null);
   const [openPayload, setOpenPayload] = useState(null);
   const { data, error } = results;
@@ -432,7 +433,9 @@ export function SearchResults({ server, tube, query, results, settings, onAction
                 <th scope="row" className="font-monospace fw-normal text-break">{job.id}</th>
                 <td><span className={'job-search-state job-state-' + job.stats.state}>{nameOf(job.stats.state)}</span></td>
                 <td><SearchPayloadPreview job={job} query={query} /></td>
-                <td><div className="d-flex justify-content-end gap-1">
+                <td><div className="d-flex justify-content-end align-items-center gap-1">
+                  {job.payload != null && <button type="button" className={neutral + ' console-icon-button'} title="Copy payload to clipboard"
+                    aria-label={'Copy payload for job #' + job.id} onClick={() => onCopy(job.payload)}><Icon name="copy" /></button>}
                   {job.payload && <button type="button" className={neutral + ' job-search-payload-toggle text-nowrap'}
                     aria-label={toggleLabel + ' for job #' + job.id} aria-expanded={expanded} aria-controls={expanded ? panelId : undefined}
                     onClick={() => setOpenPayload(expanded ? null : { id: job.id, url: results.url })}>
