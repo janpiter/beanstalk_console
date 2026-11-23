@@ -177,13 +177,14 @@ function ClearableSearch({ value, onValueChange, defaultValue = '', clearLabel, 
   </div>;
 }
 
-function TubeJobSearch({ server, tube, query, state, limit, onSearch }) {
+function TubeJobSearch({ server, tube, query, state, limit, listFilter, onSearch }) {
   return <form className="tube-job-search" role="search" aria-label="Search jobs in this tube" action="./" method="get" onSubmit={onSearch}>
     <input type="hidden" name="server" value={server.endpoint} />
     <input type="hidden" name="tube" value={tube} />
     <input type="hidden" name="state" value={state} />
     <input type="hidden" name="action" value="search" />
     <input type="hidden" name="limit" value={limit} />
+    {listFilter && <input type="hidden" name="filter" value={listFilter} />}
     <div className="input-group input-group-sm">
       <ClearableSearch className="form-control form-control-sm" name="searchStr" placeholder="Search jobs" aria-label="Search jobs in this tube"
         clearLabel="Clear job search" defaultValue={query} maxLength={1000} required />
@@ -192,7 +193,7 @@ function TubeJobSearch({ server, tube, query, state, limit, onSearch }) {
   </form>;
 }
 
-function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, loadingTubes, serversError, tubesError, samplesPage, onAction, refresh, changeRefresh, onColumns, appearance, onSignOut }) {
+function Navigation({ servers, server, tubes, tube, tubeList, listFilter, loadingServers, loadingTubes, serversError, tubesError, samplesPage, onAction, refresh, changeRefresh, onColumns, appearance, onSignOut }) {
   const [expanded, setExpanded] = useState(false);
   const availableServers = server && !servers.some(item => item.id === server.id) ? [...servers, server] : servers;
   const serverOptions = [{ id: '', label: 'All servers', href: './?' }, ...availableServers.map(item => ({
@@ -202,7 +203,7 @@ function Navigation({ servers, server, tubes, tube, tubeList, loadingServers, lo
   const tubeNames = tubes.map(item => item.name);
   if (tube && !tubeNames.includes(tube)) tubeNames.unshift(tube);
   const tubeOptions = [{ id: '', label: 'All tubes', href: locationFor(server) }, ...tubeNames.map(name => ({
-    id: name, label: name, href: locationFor(server, name),
+    id: name, label: name, href: actionLocation(server, name, undefined, { filter: listFilter }),
   }))];
   return <nav className={'navbar navbar-expand-lg sticky-top bg-body rounded-3 mx-3' + (tubeList ? ' navbar-with-tube-filter rounded-bottom-0' : '')} aria-label="Main navigation">
     <div className={'container-fluid' + (tubeList ? ' px-3' : '')}>
@@ -251,6 +252,7 @@ export default function Console({ appearance, onSignOut }) {
   const sampleEdit = ['newSample', 'editSample'].includes(action);
   const samplesPage = sampleEdit || ['manageSamples', 'deleteSample'].includes(action);
   const query = action === 'search' ? params.get('searchStr') || '' : '';
+  const listFilter = params.get('filter') || undefined;
   const from = params.get('from') || '';
   const [settings, setSettings] = useState(() => ({ ...settingsFromCookies(), ...preference('settings', {}) }));
   const [refreshChoice, setRefreshChoice] = useState(() =>
@@ -752,7 +754,7 @@ export default function Console({ appearance, onSignOut }) {
   return <div onClick={followLink}>
     <Toaster theme={appearance.resolvedTheme} />
     <div className="container-fluid">
-      <Navigation {...{ servers, server, tubes, tube, tubeList, loadingServers, loadingTubes, samplesPage, onAction: startDialog, refresh, changeRefresh }}
+    <Navigation {...{ servers, server, tubes, tube, tubeList, listFilter, loadingServers, loadingTubes, samplesPage, onAction: startDialog, refresh, changeRefresh }}
         serversError={serversResource.error} tubesError={overview.error}
         appearance={appearance} onSignOut={onSignOut}
         onColumns={() => startDialog({ type: 'columns', tubeColumns: Boolean(server), fields: server ? tubeFields : serverFields, visible: server ? visibleTubeFields : visibleServerFields })} />
@@ -771,14 +773,14 @@ export default function Console({ appearance, onSignOut }) {
                 aria-label="Search tubes" clearLabel="Clear tube filter" value={filter} onValueChange={filterTubes} />
               <div id="tubeCountInfo" className="form-text text-body-secondary mt-2" aria-live="polite">{loadingTubes ? 'Loading tubes…' : overview.data && (filter ? `${filtered.length} of ${tubes.length} tubes match · ${tubes.length} total tubes` : `${tubes.length} total tubes`)}</div>
             </div>
-            <TubeTable tubes={filtered} fields={visibleTubeFields} server={server} selected={selected} onSelect={select} previous={overview.previousData?.tubes} loading={loadingTubes}
+            <TubeTable tubes={filtered} fields={visibleTubeFields} server={server} listFilter={listFilter} selected={selected} onSelect={select} previous={overview.previousData?.tubes} loading={loadingTubes}
               bulk={<BulkControls selected={active} visibleTubes={filtered} run={run} />} />
           </> : detail.data || loadingDetail ? <>
             {loadingDetail && !query && <span className="visually-hidden" role="status">Loading tube details…</span>}
             <TubeTable tubes={detail.data ? [detail.data.stats] : []} fields={visibleTubeFields} detail loading={loadingDetail}
-              tubeName={tube} server={server || { endpoint: serverKey }} searchResults={Boolean(query)}
+              tubeName={tube} server={server || { endpoint: serverKey }} listFilter={listFilter} searchResults={Boolean(query)}
               headerSearch={server && <TubeJobSearch key={server.id + ':' + tube + ':' + query} {...{ server, tube, query }}
-                state={params.get('state') || ''} limit={settings.searchLimit} onSearch={submitSearch} />}
+                state={params.get('state') || ''} limit={settings.searchLimit} listFilter={listFilter} onSearch={submitSearch} />}
               footer={!query && (detail.data
                 ? <TubeQueueActions key={server.id + ':' + tube} {...{ stats: detail.data.stats, server, tube, run }}>
                   <TubeJobAddActions {...{ server, tube, samples: samples.data, onAction: startDialog }} />

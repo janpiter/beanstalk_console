@@ -356,7 +356,7 @@ export function ServerSummary({ servers, fields, revision, interval, onAction, p
   </section>;
 }
 
-export function TubeTable({ tubes = [], fields, server, selected, onSelect, previous, bulk, tubeName, detail, loading, headerSearch, footer, searchResults }) {
+export function TubeTable({ tubes = [], fields, server, selected, onSelect, previous, bulk, tubeName, listFilter, detail, loading, headerSearch, footer, searchResults }) {
   const visibleSelected = tubes.filter(tube => selected?.includes(tube.name)).length;
   const selectRef = useRef(null);
   useEffect(() => {
@@ -373,7 +373,7 @@ export function TubeTable({ tubes = [], fields, server, selected, onSelect, prev
     {bulk}
     <div className={'queue-panel' + (detail ? '' : ' queue-list-panel')}>
       {detail && <header className="queue-panel-header queue-tube-header">
-        <a className="btn btn-sm queue-back-link" href={locationFor(server, searchResults ? tubeName : undefined)}
+        <a className="btn btn-sm queue-back-link" href={actionLocation(server, searchResults ? tubeName : undefined, undefined, { filter: listFilter })}
           aria-label={searchResults ? 'Back to tube detail' : 'Back to tube list'}>
           <Icon name="back" /> {searchResults ? 'Tube detail' : 'Tube list'}
         </a>
@@ -401,7 +401,7 @@ export function TubeTable({ tubes = [], fields, server, selected, onSelect, prev
                 {!detail && <td className="tube-select-column"><input className="form-check-input tube-row-select" type="checkbox" aria-label={'Select tube ' + tube.name}
                   checked={selected.includes(tube.name)} onChange={event => onSelect([tube.name], event.target.checked)} /></td>}
                 {!detail && <th scope="row" className="queue-identity tube-name-cell" id={'tube-' + tube.name}><div className="tube-name-content">
-                  <a href={locationFor(server, tube.name)} className={textLink}>{tube.name}</a>
+                  <a href={actionLocation(server, tube.name, undefined, { filter: listFilter })} className={textLink}>{tube.name}</a>
                   {paused && <span className="tube-paused-indicator" role="img" aria-label={'Paused, ' + tube['pause-time-left'] + ' seconds remaining'}><Icon name="pause" weight="fill" /></span>}
                 </div></th>}
                 <StatCells fields={columns} starts={starts} record={tube} previous={previousByName.get(tube.name)} />
