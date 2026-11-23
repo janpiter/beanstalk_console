@@ -45,6 +45,9 @@ button.nav-link {
 
 .tube-paused-indicator .console-icon { font-size: .9rem; }
 
+/* The dialog scroll lock preserves the body's top spacing as padding. */
+body.no-nav.mt-3[data-scroll-locked] { margin-top: 0 !important; }
+
 .console-dialog-overlay {
   position: fixed;
   inset: 0;
@@ -55,14 +58,14 @@ button.nav-link {
 .console-dialog {
   --dialog-gutter: .5rem;
   position: fixed;
-  inset-block-start: var(--dialog-gutter);
-  inset-inline: 0;
+  inset: 0;
   z-index: 1055;
   display: flex;
   width: min(500px, calc(100% - 2 * var(--dialog-gutter)));
+  height: fit-content;
   max-height: calc(100% - 2 * var(--dialog-gutter));
   max-height: calc(100dvh - 2 * var(--dialog-gutter));
-  margin-inline: auto;
+  margin: auto;
   overflow: hidden;
   color: var(--bs-body-color);
   background-color: var(--bs-body-bg, #212529);
