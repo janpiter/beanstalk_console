@@ -366,9 +366,8 @@ export default function Console({ appearance, onSignOut }) {
         if (!checked) next.delete(name);
         else if (!next.has(name) && statsByName.has(name)) {
           const stats = statsByName.get(name);
-          const buried = Number(stats['current-jobs-buried']) || 0;
-          const total = states.reduce((sum, state) => sum + (Number(stats['current-jobs-' + state]) || 0), 0);
-          next.set(name, { buried, total });
+          const counts = Object.fromEntries(states.map(state => [state, Number(stats['current-jobs-' + state]) || 0]));
+          next.set(name, { ...counts, all: states.reduce((sum, state) => sum + counts[state], 0) });
         }
       }
       return next;
@@ -497,12 +496,13 @@ export default function Console({ appearance, onSignOut }) {
   const pauseSeconds = settings.pause < 1 ? 3600 : settings.pause;
 
   function run(operation, names, options = {}) {
-    const limits = !tube && (operation === 'clear' || operation === 'kick')
-      ? names.map(name => selection.get(name)[operation === 'kick' ? 'buried' : 'total'])
+    const limitsByState = !tube && operation === 'clear'
+      ? Object.fromEntries(['all', ...states].map(state => [state, names.map(name => selection.get(name)[state])]))
       : undefined;
+    const limits = !tube && operation === 'kick' ? names.map(name => selection.get(name).buried) : undefined;
     startDialog({
       type: 'bulk', action: operation, tubes: names, state: options.state, fromTubeList: !tube,
-      limits,
+      limits, limitsByState,
       options: operation === 'pause' ? { seconds: pauseSeconds, ...options } : options,
     });
   }
@@ -605,18 +605,28 @@ export default function Console({ appearance, onSignOut }) {
 
   async function submit(form) {
     if (pending.current) return;
-    if (dialog.limits) {
+    if (dialog.limits || dialog.limitsByState) {
+      const state = dialog.limitsByState ? form.get('clearState') : dialog.state;
+      if (dialog.limitsByState && !Object.hasOwn(dialog.limitsByState, state)) {
+        setError('Choose which job states to delete.');
+        return;
+      }
+      const limits = dialog.limitsByState?.[state] ?? dialog.limits;
       const targets = [];
       for (const [index, tube] of dialog.tubes.entries()) {
         const value = form.get('jobLimit-' + index);
         const limit = Number(value);
-        if (!value?.trim() || !Number.isSafeInteger(limit) || limit < 0 || limit > dialog.limits[index]) {
+        if (!value?.trim() || !Number.isSafeInteger(limit) || limit < 0 || limit > limits[index]) {
           setError('Enter a whole number between 0 and the maximum for each tube.');
           return;
         }
         if (limit > 0) targets.push({ tube, limit });
       }
-      return runJobBatch(targets.map(entry => entry.tube), { state: dialog.state, targets });
+      if (!targets.length) {
+        setError('Enter a positive limit for at least one tube.');
+        return;
+      }
+      return runJobBatch(targets.map(entry => entry.tube), { state, targets });
     }
     if (dialog.action === 'clear' && dialog.clearCount !== undefined) {
       const target = Number(form.get('clearCount'));

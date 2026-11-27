@@ -260,14 +260,16 @@ body.no-nav.mt-3[data-scroll-locked] { margin-top: 0 !important; }
 }
 
 .console-tube-result-list {
-  margin: .45rem 0 0;
-  padding-inline-start: 1.5rem;
+  margin: .3rem 0 0;
+  padding-inline-start: 1.35em;
   list-style: decimal outside;
 }
 
+.console-tube-result-list:has(> li:nth-child(10)) { padding-inline-start: 1.95em; }
+
 .console-tube-result-list li + li {
-  margin-top: .375rem;
-  padding-top: .375rem;
+  margin-top: .3rem;
+  padding-top: .3rem;
   border-top: 1px solid var(--bs-border-color);
 }
 

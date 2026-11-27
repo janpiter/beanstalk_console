@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Alert, nameOf, neutral, success } from '../../components/console-ui.jsx';
+import { Alert, nameOf, neutral, states, success } from '../../components/console-ui.jsx';
 import { ColumnFilter } from '../../components/column-filter.jsx';
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/dialog.jsx';
 import { Icon } from '../../components/icon.jsx';
@@ -170,39 +170,56 @@ function TubeListActionSummary({ action }) {
   </div>;
 }
 
-function TubeJobLimits({ action, counts, setCounts }) {
-  const clearing = action.action === 'clear';
+const clearScopes = ['all', ...states];
+const clearScopeLabel = scope => scope === 'all' ? 'All 3 states' : nameOf(scope);
+
+function TubeJobLimits({ action, limits, counts, changeCount, scope, changeScope }) {
+  const clearing = Boolean(action.limitsByState);
   return <div className="console-preference-form">
+    {clearing && <fieldset className="console-clear-scope">
+      <legend>Delete from</legend>
+      <div className="theme-options console-clear-scope-options">
+        {clearScopes.map(state => <label key={state}>
+          <input type="radio" className="btn-check" name="clearState" value={state} checked={scope === state}
+            onChange={() => changeScope(state)} />
+          <span>{clearScopeLabel(state)}</span>
+        </label>)}
+      </div>
+    </fieldset>}
     <p className={clearing ? 'console-job-delete-note mb-0' : 'small text-body-secondary mb-0'}>
-      {clearing && <Icon name="warning" weight="regular" />}
-      <span>{tubeActionDescriptions[action.action]}</span>
+      {clearing ? <>
+        <Icon name="warning" weight="regular" />
+        <span><strong>Permanently delete</strong> {scope === 'all' ? 'ready, delayed, and buried' : scope} jobs.</span>
+      </> : <span>{tubeActionDescriptions[action.action]}</span>}
     </p>
     <section aria-labelledby="selected-tube-limits">
-      <h6 id="selected-tube-limits" className="console-tube-action-heading">
-        {action.tubes.length} {action.tubes.length === 1 ? 'tube' : 'tubes'} selected
-      </h6>
-      <p className="small text-body-secondary mb-2">Limits use the job count when each tube was selected.</p>
+      <div className="console-tube-limit-heading">
+        <h6 id="selected-tube-limits" className="console-tube-action-heading mb-0">
+          {action.tubes.length} {action.tubes.length === 1 ? 'tube' : 'tubes'} selected
+        </h6>
+        {clearing && <span className="small text-body-secondary">Limit per tube</span>}
+      </div>
+      {!clearing && <p className="small text-body-secondary mb-2">Limits use the job count when each tube was selected.</p>}
       <ul className="console-tube-action-list console-tube-limit-list">
         {action.tubes.map((tube, index) => {
           const id = 'jobLimit-' + index;
-          const max = action.limits[index];
+          const max = limits[index];
           return <li key={tube}>
             <div>
               <label htmlFor={id}>{tube}</label>
-              <div id={id + '-max'} className="text-body-secondary">Max. {max.toLocaleString()} jobs</div>
+              <div id={id + '-max'} className="text-body-secondary">{clearing && max === 0
+                ? `No ${scope === 'all' ? 'eligible' : scope} jobs at selection`
+                : `Max. ${max.toLocaleString()} jobs`}</div>
             </div>
             <input id={id} name={id} className="form-control form-control-sm" type="number" inputMode="numeric"
               aria-label={'Job limit for ' + tube} aria-describedby={id + '-max'} min={0} max={max} step={1} required
               readOnly={max === 0} value={counts[index]}
-              onChange={event => {
-                const value = event.target.value;
-                setCounts(previous => previous.map((count, item) => item === index ? value : count));
-              }} />
+              onChange={event => changeCount(index, event.target.value)} />
           </li>;
         })}
       </ul>
     </section>
-    <p className="small text-body-secondary mb-0">Set a limit to 0 to skip that tube.</p>
+    <p className="small text-body-secondary mb-0">{clearing && 'Limits use counts from when the tubes were selected. '}Enter 0 to skip a tube.</p>
   </div>;
 }
 
@@ -322,10 +339,19 @@ function Settings({ settings }) {
 
 export function ActionDialog({ action, close, submit, settings, servers, tubes, busy, error, returnFocus }) {
   const [move, setMove] = useState('new');
-  const [counts, setCounts] = useState(() => action.limits?.map(String));
+  const [scope, changeScope] = useState('all');
+  const [drafts, setDrafts] = useState({});
+  const clearing = Boolean(action.limitsByState);
+  const limits = action.limitsByState?.[scope] ?? action.limits;
+  const counts = drafts[scope] ?? limits?.map(String);
   const validCounts = counts?.every((value, index) => value !== '' && Number.isSafeInteger(Number(value)) &&
-    Number(value) >= 0 && Number(value) <= action.limits[index]);
+    Number(value) >= 0 && Number(value) <= limits[index]);
   const total = validCounts ? counts.reduce((sum, count) => sum + BigInt(Number(count)), 0n) : null;
+  const activeTubes = validCounts ? counts.filter(count => Number(count) > 0).length : 0;
+  function changeCount(index, value) {
+    setDrafts(previous => ({ ...previous, [scope]: (previous[scope] ?? limits.map(String))
+      .map((count, item) => item === index ? value : count) }));
+  }
   const title = titleFor(action);
   const variant = action.pickDestination ? 'send' : action.clearCount !== undefined ? 'clear'
     : action.action === 'move' ? 'move' : action.fromTubeList ? 'tube-action' : action.type;
@@ -336,7 +362,9 @@ export function ActionDialog({ action, close, submit, settings, servers, tubes, 
     send: 'Send job', add: 'Add job', move: move === '$buried' ? 'Bury jobs' : 'Move jobs', clear: 'Delete jobs', sample: 'Save sample',
   }[variant];
   const destructive = action.type.startsWith('delete') || action.type === 'removeServer' || action.action === 'clear';
-  const primary = preferenceAction ?? title;
+  const primary = clearing
+    ? (total !== null && total > 0n ? `Delete up to ${total.toLocaleString()} ${total === 1n ? 'job' : 'jobs'}` : 'Delete jobs')
+    : preferenceAction ?? title;
   return <Dialog open onOpenChange={open => { if (!open && !busy) close(); }}>
     <DialogContent dismissible={!busy} returnFocus={returnFocus}
       className={preferenceIcon
@@ -361,7 +389,7 @@ export function ActionDialog({ action, close, submit, settings, servers, tubes, 
           {action.type === 'columns' && <ColumnFilter fields={action.fields} visible={action.visible} tubeColumns={action.tubeColumns} />}
           {action.type === 'settings' && <Settings settings={settings} />}
           {action.type === 'bulk' && <>
-            {action.limits ? <TubeJobLimits action={action} counts={counts} setCounts={setCounts} />
+            {limits ? <TubeJobLimits {...{ action, limits, counts, changeCount, scope, changeScope }} />
               : action.fromTubeList ? <TubeListActionSummary action={action} />
               : action.action === 'move' ? <MoveJobFields action={action} tubes={tubes} mode={move} setMode={setMove} />
               : action.clearCount !== undefined ? <ClearJobFields action={action} />
@@ -375,14 +403,16 @@ export function ActionDialog({ action, close, submit, settings, servers, tubes, 
           {error && <Alert error message={error} />}
         </fieldset></div>
         <DialogFooter>
-          {action.limits && <span className="console-tube-limit-total text-body-secondary" aria-live="polite">
-            {total === null ? 'Enter valid job limits' : <>Up to <strong className="text-body">{total.toLocaleString()}</strong> jobs</>}
+          {limits && <span className="console-tube-limit-total text-body-secondary" aria-live="polite">
+            {total === null ? 'Enter valid job limits' : clearing
+              ? (total === 0n ? 'No jobs to delete' : `${activeTubes} ${activeTubes === 1 ? 'tube' : 'tubes'} · ${clearScopeLabel(scope)}`)
+              : <>Up to <strong className="text-body">{total.toLocaleString()}</strong> jobs</>}
           </span>}
           <DialogClose asChild>
             <button type="button" className={preferenceIcon ? neutral : 'btn btn-secondary btn-sm'} disabled={busy}>{preferenceIcon ? 'Cancel' : 'Close'}</button>
           </DialogClose>
           <button type="submit" className={destructive ? 'btn btn-danger btn-sm' : success}
-            disabled={busy || (action.pickDestination && !servers.length) || (action.limits && (!validCounts || total === 0n))}>{busy ? (action.pickDestination ? 'Sending…' : 'Working…') : primary}</button>
+            disabled={busy || (action.pickDestination && !servers.length) || Boolean(limits && (!validCounts || total === 0n))}>{busy ? (action.pickDestination ? 'Sending…' : 'Working…') : primary}</button>
         </DialogFooter>
       </form>
     </DialogContent>

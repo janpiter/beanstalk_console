@@ -228,6 +228,19 @@
 .console-tube-action-list .console-icon { align-self: flex-start; margin-top: .18em; color: var(--bs-secondary-color); }
 .console-tube-action-list:focus-visible { outline: 2px solid var(--console-focus); outline-offset: 2px; }
 
+.console-clear-scope { min-width: 0; }
+.console-clear-scope legend { margin-bottom: .35rem; font-size: .875rem; font-weight: 650; }
+.console-clear-scope .console-clear-scope-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.console-tube-limit-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .25rem .5rem;
+  margin-bottom: .4rem;
+}
+
 .console-tube-limit-list { max-height: min(18rem, 42dvh); }
 
 .console-tube-limit-list li {
@@ -240,6 +253,7 @@
 
 .console-tube-limit-list label { font-weight: 600; }
 .console-tube-limit-list input { text-align: end; font-variant-numeric: tabular-nums; }
+.console-tube-limit-list input:invalid { border-color: var(--bs-danger-border-subtle); }
 .console-tube-limit-total { margin-inline-end: auto; font-size: .825rem; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 575px) {
@@ -247,6 +261,7 @@
 }
 
 @media (max-width: 419px) {
+  .console-clear-scope .console-clear-scope-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .console-settings-grid { grid-template-columns: minmax(0, 1fr); }
   .console-server-address { grid-template-columns: minmax(0, 1fr) 5.5rem; }
 }
